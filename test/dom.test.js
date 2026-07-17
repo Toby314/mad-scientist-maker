@@ -45,7 +45,7 @@ const loadScript = (rel) => {
 };
 
 // Load in the SAME order index.html uses.
-['js/taxonomy.js', 'js/catalog.js', 'js/engine.js', 'js/inventory.js', 'js/ai.js', 'js/ui.js', 'js/app.js']
+['js/taxonomy.js', 'js/catalog.js', 'js/engine.js', 'js/inventory.js', 'js/ai.js', 'js/ui.js', 'js/detail.js', 'js/app.js']
   .forEach(loadScript);
 
 // jsdom keeps readyState as 'loading', so app.js attached a 'load' listener for
@@ -66,8 +66,8 @@ const ownedTxt = doc.getElementById('owned-count').textContent;
 console.log('   owned count text =', ownedTxt);
 console.log('   buildable cards =', buildCards.length, '| near cards =', nearCards.length);
 assert(buildCards.length === 6, 'exactly 6 buildable cards (matches Node engine test)');
-assert(nearCards.length === 4, 'shows 4 near-miss cards (spec: 2-4)');
-assert(/7 parts owned/.test(ownedTxt), 'owned-count reads 7');
+assert(nearCards.length >= 4, 'shows >=4 near-miss cards (v2 widened 1-3 window)');
+assert(/7 parts owned/.test(ownedTxt), 'owned-count reads 7 (qty map total)');
 
 const titles = Array.from(buildCards).map(c => c.querySelector('h3').textContent);
 console.log('   buildable titles:', titles.join(' | '));
@@ -75,6 +75,8 @@ assert(titles.includes('Mini Weather Station'), 'Mini Weather Station is buildab
 assert(doc.querySelector('#buildable-list .why'), 'buildable card has a WHY/teaching block');
 assert(doc.querySelector('#buildable-list .steps li'), 'buildable card has numbered steps');
 assert(doc.querySelector('#buildable-list .chip.uses'), 'buildable card lists "Uses your" parts');
+// v2: every card has a "View details" action button.
+assert(doc.querySelector('#buildable-list .card-actions [data-project-id]'), 'buildable card has View-details action');
 
 const missBox = doc.querySelector('#near-list .missing-box');
 assert(missBox, 'near-miss card has a missing-box');
@@ -104,6 +106,28 @@ firstCb.dispatchEvent(new window.Event('change'));
 const after = doc.getElementById('owned-count').textContent;
 console.log('   owned count after uncheck =', after);
 assert(/6 parts owned/.test(after), 'unchecking drops count to 6 and recomputes (no crash)');
+
+console.log('\n=== TEST 6 (v2): quantity stepper changes owned count ===');
+const ledRow = Array.from(doc.querySelectorAll('#inventory-groups .part'))
+  .find(r => /LED/.test(r.textContent));
+assert(ledRow, 'an LED inventory row exists');
+const plus = ledRow.querySelector('.qtybtn:last-child');
+const beforeTxt = doc.getElementById('owned-count').textContent;
+plus.dispatchEvent(new window.Event('click', { bubbles: true }));
+const afterTxt = doc.getElementById('owned-count').textContent;
+console.log('   owned before/after LED + =', beforeTxt, '->', afterTxt);
+assert(beforeTxt !== afterTxt, 'clicking + on a part increments owned count (qty model works)');
+
+console.log('\n=== TEST 7 (v2): hash route opens detail view with wiring table ===');
+window.location.hash = '#/project/weather_station';
+window.dispatchEvent(new window.Event('hashchange'));
+const detail = doc.getElementById('tab-detail');
+assert(detail.querySelector('h2'), 'detail panel renders a project title');
+assert(detail.querySelector('.pin-table'), 'detail view renders a wiring pin-table');
+assert(detail.querySelector('.morelike'), 'detail view renders "More like this"');
+const guide = detail.querySelector('.guide-link');
+assert(guide && /guide/i.test(guide.textContent), 'detail view shows a clickable "Full assembly guide" link');
+assert(detail.classList.contains('active'), 'detail panel becomes active on hash route');
 
 console.log('\n=== DONE ===');
 if (process.exitCode) console.log('SOME TESTS FAILED'); else console.log('ALL DOM TESTS PASSED');

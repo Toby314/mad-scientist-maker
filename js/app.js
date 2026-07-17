@@ -15,7 +15,8 @@
   const AI = root.AI;
 
   // ---- STATE (in memory mirror of what's in localStorage) ----
-  let state = Inv.load();   // { version, ownedIds, custom }
+  // v2: state.owned is a QUANTITY MAP { partId: qty } (was v1 ownedIds array).
+  let state = Inv.load();   // { version, owned, custom }
 
   // ---- DOM refs ----
   const $ = sel => document.querySelector(sel);
@@ -29,25 +30,23 @@
   // ---- RECOMPUTE + RENDER (called on every state change) ----
   let lastResult = null;
   function recompute() {
-    lastResult = E.analyze(state.ownedIds, state.custom);
+    // v2: analyze() takes the owned qty map directly.
+    lastResult = E.analyze(state.owned, state.custom);
     UI.renderProjects(lastResult, buildableEl, nearEl, summaryEl);
     UI.renderShopping(shoppingEl, lastResult.shoppingList);
-    ownedCount.textContent = state.ownedIds.length + ' part' + (state.ownedIds.length === 1 ? '' : 's') + ' owned';
+    const total = Object.values(state.owned).reduce((a, q) => a + q, 0);
+    ownedCount.textContent = total + ' part' + (total === 1 ? '' : 's') + ' owned';
   }
 
   function persist() {
-    Inv.setOwned(state.ownedIds, state.custom);
+    Inv.save(state);
   }
 
-  // ---- INVENTORY rendering + toggle ----
+  // ---- INVENTORY rendering + qty ----
   function renderInventoryNow() {
-    UI.renderInventory(groupsEl, state.ownedIds, (id, checked) => {
-      if (checked) {
-        if (!state.ownedIds.includes(id)) state.ownedIds.push(id);
-      } else {
-        state.ownedIds = state.ownedIds.filter(x => x !== id);
-      }
-      persist();
+    // v2: renderInventory now takes the owned MAP and a setQty callback.
+    UI.renderInventory(groupsEl, state.owned, (id, qty) => {
+      Inv.setQty(state, id, qty);
       recompute();
     });
   }
@@ -72,19 +71,19 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
-  // ---- BUTTONS: Inventory toolbar ----
   // Sample inventory from the spec (used for the self-test + a demo for you).
-  const SAMPLE = ['esp32', 'dht22', 'ssd1306', 'pir', 'relay', 'led', 'buzzer'];
+  // v2: stored as a quantity map (each sample part = qty 1).
+  const SAMPLE = { esp32: 1, dht22: 1, ssd1306: 1, pir: 1, relay: 1, led: 1, buzzer: 1 };
 
   $('#btn-sample').addEventListener('click', () => {
-    state.ownedIds = SAMPLE.slice();
+    state.owned = Object.assign({}, SAMPLE);
     state.custom = [];
     persist(); renderInventoryNow(); recompute();
     toast('Loaded sample inventory');
   });
   $('#btn-clear').addEventListener('click', () => {
     if (!confirm('Clear all owned parts?')) return;
-    state.ownedIds = []; state.custom = [];
+    state.owned = {}; state.custom = [];
     persist(); renderInventoryNow(); recompute();
     toast('Inventory cleared');
   });
@@ -143,9 +142,9 @@
   $('#btn-export2').addEventListener('click', () => Inv.exportToFile(state));
   $('#btn-reset').addEventListener('click', () => {
     if (!confirm('Reset inventory AND AI settings?')) return;
-    localStorage.removeItem('msm.inventory.v1');
+    localStorage.removeItem('msm.inventory.v2');
     localStorage.removeItem('msm.ai.v1');
-    state = { version: 1, ownedIds: [], custom: [] };
+    state = { version: 2, owned: {}, custom: [] };
     renderInventoryNow(); recompute(); toast('Reset complete');
   });
 
@@ -176,7 +175,7 @@
     const btn = document.getElementById('btn-ai');
     btn.disabled = true; btn.textContent = '✨ Thinking…';
     try {
-      const capNames = state.ownedIds.map(id => (T.PARTS.find(p => p.id === id) || {}).name || id);
+      const capNames = Object.keys(state.owned).map(id => (T.PARTS.find(p => p.id === id) || {}).name || id);
       const ideas = await AI.suggest(capNames, 'surprise');
       // Render AI idea cards above the buildable list, clearly labelled.
       ideas.forEach(idea => {
@@ -215,6 +214,7 @@
   }
 
   // ---- INITIAL RENDER ----
+  Detail.init();          // v2: hash routing + card-click -> detail view
   renderInventoryNow();
   recompute();
 })(window);

@@ -36,8 +36,8 @@
     return out;
   }
 
-  // ---------------- INVENTORY ----------------
-  function renderInventory(groupsEl, ownedIds, onToggle) {
+  // ---------------- INVENTORY (v2: quantity steppers) ----------------
+  function renderInventory(groupsEl, ownedMap, onSetQty) {
     groupsEl.innerHTML = '';
     T.CATEGORIES.forEach(cat => {
       const parts = T.PARTS.filter(p => p.cat === cat.id);
@@ -45,13 +45,26 @@
       const box = el('div', 'cat');
       box.appendChild(el('h3', null, escapeHtml(cat.name)));
       parts.forEach(part => {
+        const qty = ownedMap[part.id] || 0;
         const row = el('label', 'part');
         const cb = el('input');
         cb.type = 'checkbox';
-        cb.checked = ownedIds.includes(part.id);
-        cb.addEventListener('change', () => onToggle(part.id, cb.checked));
+        cb.checked = qty >= 1;
+        cb.addEventListener('change', () => onSetQty(part.id, cb.checked ? Math.max(1, qty) : 0));
         row.appendChild(cb);
         row.appendChild(el('span', null, escapeHtml(part.name)));
+
+        // v2: quantity stepper (− qty +), only enabled when owned.
+        const stepper = el('span', 'qty');
+        const minus = el('button', 'qtybtn', '−');
+        const val = el('span', 'qtyval', qty >= 1 ? String(qty) : '0');
+        const plus = el('button', 'qtybtn', '+');
+        minus.disabled = qty < 1;
+        minus.addEventListener('click', (e) => { e.preventDefault(); onSetQty(part.id, qty - 1); });
+        plus.addEventListener('click', (e) => { e.preventDefault(); onSetQty(part.id, qty + 1); });
+        stepper.appendChild(minus); stepper.appendChild(val); stepper.appendChild(plus);
+        row.appendChild(stepper);
+
         box.appendChild(row);
       });
       groupsEl.appendChild(box);
@@ -62,6 +75,7 @@
   function projectCard(r, kind) {
     const p = r.project;
     const card = el('div', 'card ' + kind);
+    card.setAttribute('data-project-id', p.id); // clickable -> detail view
 
     card.appendChild(el('h3', null, escapeHtml(p.title)));
     card.appendChild(el('p', 'blurb', escapeHtml(p.blurb)));
@@ -109,6 +123,13 @@
     lu.innerHTML = '<b>Level up:</b> ' + escapeHtml(p.levelUp);
     card.appendChild(lu);
 
+    // v2: actions — "View details" opens the hash-routed detail page.
+    const actions = el('div', 'card-actions');
+    const view = el('button', 'btn ghost small', '🔍 View details');
+    view.setAttribute('data-project-id', p.id);
+    actions.appendChild(view);
+    card.appendChild(actions);
+
     return card;
   }
 
@@ -132,7 +153,10 @@
   }
 
   // ---------------- PROJECTS TAB ----------------
-  function renderProjects(result, buildableList, nearList, summaryEl) {
+  // maxNear = how many near-misses to show initially (v2: capped because the
+  // 1–3 gap window can surface many). Extra ones are revealed by "Show more".
+  function renderProjects(result, buildableList, nearList, summaryEl, maxNear) {
+    if (maxNear == null) maxNear = 4;
     buildableList.innerHTML = '';
     nearList.innerHTML = '';
 
@@ -152,8 +176,17 @@
       nearList.appendChild(el('div', 'empty',
         'Nothing just out of reach — nice, your inventory covers a lot!'));
     } else {
-      // Show up to 4 near-misses (the spec asks for 2–4).
-      result.couldve.slice(0, 4).forEach(r => nearList.appendChild(nearCard(r)));
+      const shown = result.couldve.slice(0, maxNear);
+      const hidden = result.couldve.slice(maxNear);
+      shown.forEach(r => nearList.appendChild(nearCard(r)));
+      if (hidden.length) {
+        const more = el('button', 'btn ghost', `Show ${hidden.length} more near-miss…`);
+        more.addEventListener('click', () => {
+          hidden.forEach(r => nearList.appendChild(nearCard(r)));
+          more.remove();
+        });
+        nearList.appendChild(more);
+      }
     }
   }
 

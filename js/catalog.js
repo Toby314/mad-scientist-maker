@@ -54,6 +54,13 @@
       ],
       levelUp: 'Add a second LED and make the button toggle between them.',
       coolness: 2, learning: 5, tags: ['gpio', 'basics'],
+      // v2: wiring table (reference board = ESP32) + optional deeper guide.
+      // Pin numbers are a starting point; adapt if your board differs.
+      wiring: [
+        { part: 'ESP32', signal: 'GPIO for LED', pin: 'GPIO 2', note: 'LED anode via 220Ω; cathode → GND' },
+        { part: 'Pushbutton', signal: 'one leg', pin: 'GPIO 4', note: 'other leg → GND; use INPUT_PULLUP' },
+      ],
+      guideUrl: 'https://www.google.com/search?q=esp32+arduino+blink+button+tutorial',
     },
     {
       id: 'pwm_dimmer',
@@ -88,6 +95,11 @@
       ],
       levelUp: 'Add a light sensor so it only triggers at night.',
       coolness: 3, learning: 4, tags: ['sensors', 'automation'],
+      wiring: [
+        { part: 'ESP32', signal: 'GPIO for LED', pin: 'GPIO 2', note: 'LED + 220Ω → GND' },
+        { part: 'PIR', signal: 'OUT', pin: 'GPIO 5', note: 'PIR VCC → 5V, GND → GND' },
+      ],
+      guideUrl: 'https://www.google.com/search?q=esp32+pir+motion+sensor+led',
     },
     {
       id: 'weather_station',
@@ -106,6 +118,13 @@
       ],
       levelUp: 'Add an RTC + log a reading every 10 min to see trends.',
       coolness: 4, learning: 4, tags: ['sensors', 'display'],
+      wiring: [
+        { part: 'ESP32', signal: 'I2C SDA', pin: 'GPIO 21', note: 'to sensor SDA' },
+        { part: 'ESP32', signal: 'I2C SCL', pin: 'GPIO 22', note: 'to sensor SCL' },
+        { part: 'BME280 / DHT22', signal: 'VCC', pin: '3.3V', note: 'GND → GND' },
+        { part: 'DHT22', signal: 'DATA', pin: 'GPIO 4', note: '4.7k–10k pull-up to 3.3V' },
+      ],
+      guideUrl: 'https://www.google.com/search?q=esp32+weather+station+bme280+arduino',
     },
     {
       id: 'plant_monitor',
@@ -190,6 +209,12 @@
       ],
       levelUp: 'Scroll the text across the screen.',
       coolness: 3, learning: 4, tags: ['display', 'i2c'],
+      wiring: [
+        { part: 'ESP32', signal: 'I2C SDA', pin: 'GPIO 21', note: 'OLED SDA' },
+        { part: 'ESP32', signal: 'I2C SCL', pin: 'GPIO 22', note: 'OLED SCL' },
+        { part: 'OLED', signal: 'VCC', pin: '3.3V', note: 'GND → GND (addr 0x3C)' },
+      ],
+      guideUrl: 'https://www.google.com/search?q=esp32+ssd1306+oled+arduino+tutorial',
     },
     {
       id: 'buzzer_melody',

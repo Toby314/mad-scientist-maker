@@ -36,23 +36,28 @@
   const PART_BY_ID = {};
   PARTS.forEach(p => { PART_BY_ID[p.id] = p; });
 
-  /**
-   * Turn an inventory (array of owned part ids, plus optional custom parts)
-   * into the SET of capabilities those parts provide.
-   * @param {string[]} ownedIds
-   * @param {Array} customParts  optional [{name, caps:[]}] the user typed in
-   * @returns {Set<string>} capability tokens
-   */
-  function computeInventoryCaps(ownedIds, customParts) {
-    const caps = new Set();
+  // v2: max owned quantity available per capability.
+  // capQty[cap] = largest quantity of that cap across all owned parts/customs.
+  function computeCapQty(ownedIds, customParts) {
+    const qty = {};
     (ownedIds || []).forEach(id => {
       const part = PART_BY_ID[id];
-      if (part) part.caps.forEach(c => caps.add(c));
+      if (!part) return;
+      const n = INV_OWNED[id] || 1; // INV_OWNED set by analyze() pre-pass
+      part.caps.forEach(c => { qty[c] = Math.max(qty[c] || 0, n); });
     });
     (customParts || []).forEach(p => {
-      if (p && Array.isArray(p.caps)) p.caps.forEach(c => caps.add(c));
+      if (!p || !Array.isArray(p.caps)) return;
+      const n = p.qty || 1;
+      p.caps.forEach(c => { qty[c] = Math.max(qty[c] || 0, n); });
     });
-    return caps;
+    return qty;
+  }
+
+  // The SET of capabilities present at least once (for "have this cap at all?").
+  function computeInventoryCaps(ownedIds, customParts) {
+    const capQty = computeCapQty(ownedIds, customParts);
+    return new Set(Object.keys(capQty).filter(c => capQty[c] >= 1));
   }
 
   /**
@@ -71,16 +76,28 @@
     return null;
   }
 
+  // INV_OWNED is set by analyze() before matching: partId -> owned quantity.
+  let INV_OWNED = {};
+
   /**
-   * Match ONE project against the inventory capabilities.
-   * @returns {object} status + missing caps + used part names + score
+   * Match ONE project against the inventory capabilities, respecting quantities.
+   * A required cap is satisfied only if ownedQty[cap] >= project.qty[cap] (default 1).
+   * @returns {object} status + missing caps/qty + used part names + score
    */
-  function matchProject(project, capSet, ownedIds, customParts) {
-    const have = capSet;
-    const reqMissing = project.requiredCaps.filter(c => !have.has(c));
+  function matchProject(project, capQty, ownedIds, customParts) {
+    const have = new Set(Object.keys(capQty).filter(c => capQty[c] >= 1));
+    const reqMissing = [];   // caps missing entirely
+    const qtyShort = [];      // caps present but not enough
+
+    project.requiredCaps.forEach(c => {
+      const need = (project.qty && project.qty[c]) || 1;
+      const got = capQty[c] || 0;
+      if (got <= 0) reqMissing.push(c);
+      else if (got < need) qtyShort.push({ cap: c, have: got, need });
+    });
+
     const optHave = project.optionalCaps.filter(c => have.has(c));
 
-    // Map each satisfied cap -> a friendly owned part name (for display).
     const usedParts = {};
     project.requiredCaps.concat(project.optionalCaps).forEach(c => {
       if (have.has(c)) {
@@ -89,37 +106,39 @@
       }
     });
 
-    if (reqMissing.length === 0) {
+    if (reqMissing.length === 0 && qtyShort.length === 0) {
       // ---- BUILDABLE NOW -----------------------------------------------------
       const score =
-        optHave.length * 2 +            // using more of your gear is better
-        (project.coolness || 0) +       // cooler = more fun to build
-        (project.learning || 0) -       // more educational = better for a learner
-        (DIFF_PENALTY[project.difficulty] || 0); // slight ease bias for new makers
-      return {
-        project, status: 'buildable', missing: [], optHave, usedParts, score,
-      };
+        optHave.length * 2 +
+        (project.coolness || 0) +
+        (project.learning || 0) -
+        (DIFF_PENALTY[project.difficulty] || 0);
+      return { project, status: 'buildable', missing: [], qtyShort, optHave, usedParts, score };
     }
 
-    // A genuine near-miss means you already have SOME of the project's required
-    // capabilities (so you're "almost there"), not that you own nothing. We
-    // therefore only call it a near-miss when at least one required cap is
-    // already satisfied. (With an empty inventory you're not "1–2 parts away"
-    // from anything — you're everything-away — so we stay quiet.)
-    const requiredPresent = project.requiredCaps.length - reqMissing.length;
+    const requiredPresent = project.requiredCaps.length - reqMissing.length - qtyShort.length;
 
-    if (reqMissing.length >= 1 && reqMissing.length <= 2 && requiredPresent >= 1) {
-      // ---- COULD'VE BEEN (near-miss, 1–2 parts away) ------------------------
+    // v2: near-miss window widened to 1–3 missing (was 1–2). A missing part OR a
+    // quantity shortfall both count as "gaps" for the Could've-Been / shopping list.
+    const gapCount = reqMissing.length + qtyShort.length;
+    if (gapCount >= 1 && gapCount <= 3 && requiredPresent >= 1) {
       const gap = reqMissing.map(c => ({
         cap: c,
-        // The human-friendly "buy this exact thing" wording from taxonomy.js.
         part: CAPABILITY_CANONICAL[c] || c,
-      }));
-      return { project, status: 'near', missing: reqMissing, gap, usedParts, score: 0 };
+        short: false,
+      })).concat(qtyShort.map(s => ({
+        cap: s.cap,
+        part: (CAPABILITY_CANONICAL[s.cap] || s.cap) + ` (have ${s.have}, need ${s.need})`,
+        short: true,
+      })));
+      // Preserve the original cap lists for the shopping list / engine internals.
+      const allMissing = reqMissing.concat(qtyShort.map(s => s.cap));
+      return { project, status: 'near', missing: allMissing, gap, qtyShort, usedParts, score: 0 };
     }
 
-    // ---- too far (3+ missing) ------------------------------------------------
-    return { project, status: 'far', missing: reqMissing, gap: [], usedParts, score: 0 };
+    // ---- too far (4+ gaps) ---------------------------------------------------
+    const allMissing = reqMissing.concat(qtyShort.map(s => s.cap));
+    return { project, status: 'far', missing: allMissing, gap: [], qtyShort, usedParts, score: 0 };
   }
 
   /**
@@ -167,13 +186,17 @@
    * @param {Array}    customParts optional user-typed parts
    * @returns {{buildable:Array, couldve:Array, shoppingList:Array}}
    */
-  function analyze(ownedIds, customParts) {
-    const capSet = computeInventoryCaps(ownedIds, customParts);
+  function analyze(ownedMap, customParts) {
+    // v2: `ownedMap` is { partId: qty }. We derive the id list and a qty lookup
+    // (INV_OWNED) so computeCapQty() can read per-part counts.
+    const ownedIds = Object.keys(ownedMap || {});
+    INV_OWNED = Object.assign({}, ownedMap || {});
+    const capQty = computeCapQty(ownedIds, customParts);
     const buildable = [];
     const near = [];
 
     PROJECT_CATALOG.forEach(project => {
-      const r = matchProject(project, capSet, ownedIds, customParts);
+      const r = matchProject(project, capQty, ownedIds, customParts);
       if (r.status === 'buildable') buildable.push(r);
       else if (r.status === 'near') near.push(r);
     });
@@ -192,15 +215,44 @@
       buildable,
       couldve: near,
       shoppingList: buildShoppingList(near),
-      inventoryCaps: Array.from(capSet),
+      inventoryCaps: Object.keys(capQty).filter(c => capQty[c] >= 1),
     };
+  }
+
+  /**
+   * DETERMINISTIC "More like this" (offline, no key needed).
+   * Scores every OTHER project by overlap with the given project, and returns
+   * the top `k`. Signal = shared tags + shared required capabilities. This is
+   * the offline twin of the AI `morelike:<title>` mode (which still works as a
+   * bonus when a key is present).
+   * @param {{id?:string}} project  the project to find siblings of
+   * @param {number} k  how many to return (default 3)
+   * @returns {Array<project>} top-k similar projects (excluding the seed)
+   */
+  function moreLike(project, k) {
+    k = k || 3;
+    const seedTags = new Set(project.tags || []);
+    const seedCaps = new Set(project.requiredCaps || []);
+    const scored = PROJECT_CATALOG
+      .filter(p => p.id !== project.id)
+      .map(p => {
+        let score = 0;
+        (p.tags || []).forEach(t => { if (seedTags.has(t)) score += 2; });
+        (p.requiredCaps || []).forEach(c => { if (seedCaps.has(c)) score += 1; });
+        return { p, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    return scored.slice(0, k).map(x => x.p);
   }
 
   return {
     analyze,
     matchProject,
     computeInventoryCaps,
+    computeCapQty,
     buildShoppingList,
+    moreLike,
     PARTS,
     PROJECT_CATALOG,
   };

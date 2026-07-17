@@ -13,7 +13,7 @@
  * set of static files; for an API-backed app you'd use network-first instead.)
  * ===========================================================================*/
 
-const CACHE = 'msm-v1';
+const CACHE = 'msm-v2';
 const SHELL = [
   './',
   'index.html',
@@ -24,6 +24,7 @@ const SHELL = [
   'js/inventory.js',
   'js/ai.js',
   'js/ui.js',
+  'js/detail.js',
   'js/app.js',
   'manifest.webmanifest',
   'icon-192.png',
