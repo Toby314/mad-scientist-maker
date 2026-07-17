@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- viewport: makes it responsive on phone + desktop -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mad Scientist Maker ⚗</title>
+  <meta name="description" content="Recommend electronics projects from the parts you already own. Offline-first, teaches the WHY." />
+  <!-- PWA manifest (only honored when served over http(s); harmless on file://) -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0b0e14" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ===================== HEADER ===================== -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">⚗</span>
+      <div>
+        <h1>Mad Scientist Maker</h1>
+        <p class="tagline">Build it with what you&rsquo;ve got.</p>
+      </div>
+    </div>
+    <div id="owned-count" class="owned-count">0 parts owned</div>
+  </header>
+
+  <!-- ===================== TAB BAR ===================== -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="inventory" role="tab">🧪 Inventory</button>
+    <button class="tab" data-tab="projects"  role="tab">💡 Projects</button>
+    <button class="tab" data-tab="shopping"  role="tab">🛒 Shopping</button>
+    <button class="tab" data-tab="settings"  role="tab">⚙️ Settings</button>
+  </nav>
+
+  <main>
+    <!-- ===================== INVENTORY TAB ===================== -->
+    <section id="tab-inventory" class="tab-panel active">
+      <div class="toolbar">
+        <button id="btn-sample" class="btn ghost">Load sample inventory</button>
+        <button id="btn-clear"  class="btn ghost danger">Clear all</button>
+        <button id="btn-export" class="btn ghost">Export JSON</button>
+        <label class="btn ghost">Import JSON
+          <input id="file-import" type="file" accept="application/json" hidden />
+        </label>
+      </div>
+      <p class="hint">Tick the parts you own. Basics (breadboard, jumper wires, USB cable, hookup wire) are assumed &mdash; you don&rsquo;t need to tick those. Results update live.</p>
+      <div id="inventory-groups" class="inventory-groups"></div>
+    </section>
+
+    <!-- ===================== PROJECTS TAB ===================== -->
+    <section id="tab-projects" class="tab-panel">
+      <div id="projects-summary" class="projects-summary"></div>
+      <h2 class="section-title">✅ Buildable Now</h2>
+      <div id="buildable-list" class="cards"></div>
+      <h2 class="section-title">🔬 Could&rsquo;ve Been <span class="muted">(1&ndash;2 parts away)</span></h2>
+      <div id="near-list" class="cards"></div>
+    </section>
+
+    <!-- ===================== SHOPPING TAB ===================== -->
+    <section id="tab-shopping" class="tab-panel">
+      <div class="toolbar">
+        <button id="btn-copy-shop" class="btn">Copy list</button>
+        <button id="btn-export-shop" class="btn ghost">Export</button>
+      </div>
+      <p class="hint">Every missing part from your near-miss projects, deduplicated and sorted by how many extra projects it would unlock. Buy the top one first for the best leverage.</p>
+      <div id="shopping-list" class="shopping-list"></div>
+    </section>
+
+    <!-- ===================== SETTINGS TAB ===================== -->
+    <section id="tab-settings" class="tab-panel">
+      <h2 class="section-title">Appearance</h2>
+      <label class="row-toggle">
+        <input type="checkbox" id="chk-light" /> Use light theme
+      </label>
+
+      <h2 class="section-title">Optional AI Suggestions</h2>
+      <p class="hint">Fully optional. The curated catalog always works offline with no key. Add an OpenAI-compatible endpoint + key (stored only in this browser) to unlock &ldquo;Surprise me&rdquo; idea generation. Your key never leaves your device except to call the endpoint you specify.</p>
+      <div class="ai-form">
+        <label>Endpoint URL
+          <input type="text" id="ai-endpoint" placeholder="https://api.openai.com/v1/chat/completions" />
+        </label>
+        <label>API key
+          <input type="password" id="ai-key" placeholder="sk-..." autocomplete="off" />
+        </label>
+        <label>Model
+          <input type="text" id="ai-model" placeholder="gpt-4o-mini" />
+        </label>
+        <div class="toolbar">
+          <button id="btn-ai-save" class="btn">Save AI settings</button>
+          <button id="btn-ai-clear" class="btn ghost danger">Clear key</button>
+        </div>
+        <p id="ai-status" class="hint"></p>
+      </div>
+
+      <h2 class="section-title">Data</h2>
+      <div class="toolbar">
+        <button id="btn-export2" class="btn ghost">Export inventory</button>
+        <label class="btn ghost">Import inventory
+          <input id="file-import2" type="file" accept="application/json" hidden />
+        </label>
+        <button id="btn-reset" class="btn ghost danger">Reset everything</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== SCRIPTS ===================== -->
+  <!-- Load order matters: data globals first, then engine (uses them), then UI. -->
+  <script src="js/taxonomy.js"></script>
+  <script src="js/catalog.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+# Installed by `npm install` (jsdom is only for tests, not needed at runtime)
+node_modules/

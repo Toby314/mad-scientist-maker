@@ -1,0 +1,219 @@
+/* =============================================================================
+ * css/styles.css  —  DARK "MAD SCIENTIST LAB" THEME
+ * -----------------------------------------------------------------------------
+ * DESIGN NOTES (the WHY):
+ * - Dark background (#0b0e14) reduces glare at the workbench and makes the
+ *   acid/neon accents pop — that's the "lab" feel.
+ * - One accent (acid green #46e88a) for "go/buildable", a warning amber/red for
+ *   "missing", and a cool cyan for links/chips. Color is used to TEACH status,
+ *   not just decorate.
+ * - CSS variables at the top = one place to retheme (light theme just flips a
+ *   few of them via the [data-theme="light"] block). No build step, plain CSS.
+ * - Layout is responsive: the inventory grid auto-fits columns; cards stack on
+ *   phones. max-width keeps line length readable on desktop.
+ * ===========================================================================*/
+
+:root {
+  --bg:        #0b0e14;
+  --bg-2:      #121722;   /* panels */
+  --bg-3:      #1b2230;   /* raised chips/inputs */
+  --border:    #283142;
+  --text:      #dfe6f2;
+  --text-dim:  #8a96ab;
+  --accent:    #46e88a;   /* acid green = buildable / go */
+  --accent-2:  #2bb673;
+  --warn:      #ffb454;   /* amber = optional / caution */
+  --danger:    #ff5d6c;   /* red = missing */
+  --cyan:      #4cc9f0;
+  --radius:    12px;
+  --shadow:    0 6px 20px rgba(0,0,0,.35);
+}
+
+/* Light theme flips the core surfaces. Toggled by <html data-theme="light">. */
+[data-theme="light"] {
+  --bg:        #f4f6fb;
+  --bg-2:      #ffffff;
+  --bg-3:      #e9eef6;
+  --border:    #d3dbe8;
+  --text:      #16202e;
+  --text-dim:  #5b6678;
+  --shadow:    0 6px 18px rgba(20,30,50,.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ---- Header ---- */
+.app-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  background: linear-gradient(180deg, var(--bg-2), var(--bg));
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-mark {
+  font-size: 30px;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+.app-header h1 { font-size: 1.25rem; margin: 0; letter-spacing: .3px; }
+.tagline { margin: 0; font-size: .8rem; color: var(--text-dim); }
+.owned-count {
+  font-size: .8rem; color: var(--bg);
+  background: var(--accent); padding: 4px 10px; border-radius: 999px;
+  font-weight: 600;
+}
+
+/* ---- Tabs ---- */
+.tabs {
+  display: flex; gap: 4px; padding: 8px 10px 0; flex-wrap: wrap;
+  background: var(--bg-2); border-bottom: 1px solid var(--border);
+}
+.tab {
+  background: transparent; color: var(--text-dim);
+  border: 1px solid transparent; border-bottom: none;
+  padding: 9px 14px; border-radius: 10px 10px 0 0; cursor: pointer;
+  font-size: .92rem; font-weight: 600;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--text); background: var(--bg);
+  border-color: var(--border); border-bottom-color: var(--bg);
+  margin-bottom: -1px;
+}
+
+/* ---- Layout ---- */
+main { max-width: 1100px; margin: 0 auto; padding: 18px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fade .2s ease; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+.btn {
+  background: var(--accent); color: #062015; border: none;
+  padding: 9px 14px; border-radius: 10px; font-weight: 700; cursor: pointer;
+  font-size: .9rem;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost {
+  background: var(--bg-3); color: var(--text); border: 1px solid var(--border);
+}
+.btn.ghost.danger { color: var(--danger); }
+.btn.ghost.danger:hover { background: rgba(255,93,108,.12); }
+
+.hint { color: var(--text-dim); font-size: .85rem; margin: 4px 0 14px; }
+.muted { color: var(--text-dim); font-weight: 400; font-size: .85em; }
+.section-title { margin: 22px 0 10px; font-size: 1.1rem; }
+
+/* ---- Inventory grid ---- */
+.inventory-groups {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.cat {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.cat h3 { margin: 0 0 8px; font-size: .95rem; color: var(--cyan); }
+.part {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 6px; border-radius: 8px; cursor: pointer; font-size: .9rem;
+}
+.part:hover { background: var(--bg-3); }
+.part input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+/* ---- Project cards ---- */
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+.card {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.card.buildable { border-left: 4px solid var(--accent); }
+.card.near { border-left: 4px solid var(--warn); }
+.card h3 { margin: 0; font-size: 1.05rem; }
+.blurb { color: var(--text-dim); font-size: .9rem; margin: 0; }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.badge {
+  font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--text-dim);
+}
+.badge.Beginner { color: var(--accent); border-color: var(--accent-2); }
+.badge.Intermediate { color: var(--warn); border-color: var(--warn); }
+.badge.Advanced { color: var(--danger); border-color: var(--danger); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font-size: .72rem; padding: 3px 8px; border-radius: 999px;
+  background: var(--bg-3); color: var(--text-dim); border: 1px solid var(--border);
+}
+.chip.concept { color: var(--cyan); border-color: rgba(76,201,240,.4); }
+.chip.uses { color: var(--accent); border-color: rgba(70,232,138,.35); }
+.why {
+  background: var(--bg-3); border-radius: 10px; padding: 10px 12px;
+  font-size: .88rem; border-left: 3px solid var(--cyan);
+}
+.why b { color: var(--cyan); }
+.steps { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--text); }
+.steps li { margin: 3px 0; }
+.levelup { font-size: .85rem; color: var(--text-dim); }
+.levelup b { color: var(--warn); }
+
+/* ---- Missing / gap box on near-miss cards ---- */
+.missing-box {
+  background: rgba(255,93,108,.10); border: 1px solid var(--danger);
+  border-radius: 10px; padding: 10px 12px; font-size: .85rem;
+}
+.missing-box .label { color: var(--danger); font-weight: 700; }
+.missing-box ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* ---- Shopping list ---- */
+.shopping-list { display: grid; gap: 10px; }
+.shop-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.shop-item .name { font-weight: 600; }
+.shop-item .detail { font-size: .8rem; color: var(--text-dim); }
+.shop-leverage {
+  font-size: .72rem; font-weight: 700; color: var(--bg);
+  background: var(--accent); padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+}
+.shop-leverage.zero { background: var(--bg-3); color: var(--text-dim); }
+
+/* ---- Settings ---- */
+.row-toggle { display: flex; align-items: center; gap: 8px; margin: 6px 0 14px; }
+.ai-form { display: grid; gap: 10px; max-width: 520px; }
+.ai-form label, .ai-form input { display: block; width: 100%; }
+.ai-form label { font-size: .85rem; color: var(--text-dim); }
+.ai-form input {
+  margin-top: 4px; background: var(--bg-3); border: 1px solid var(--border);
+  color: var(--text); padding: 9px 11px; border-radius: 9px; font-size: .9rem;
+}
+
+/* ---- Empty state ---- */
+.empty {
+  text-align: center; color: var(--text-dim); padding: 30px 10px;
+  border: 1px dashed var(--border); border-radius: var(--radius); font-size: .9rem;
+}
+
+/* ---- Toast (tiny feedback messages) ---- */
+.toast {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  background: var(--bg-3); color: var(--text); border: 1px solid var(--border);
+  padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow);
+  font-size: .88rem; opacity: 0; pointer-events: none; transition: opacity .2s;
+  z-index: 50;
+}
+.toast.show { opacity: 1; }
+
+/* ---- AI idea cards (clearly labelled unverified) ---- */
+.card.ai-card { border-left: 4px solid var(--cyan); }
+.ai-tag { font-size: .7rem; color: var(--cyan); font-weight: 700; }

@@ -1,0 +1,15 @@
+{
+  "name": "mad-scientist-maker",
+  "version": "1.0.0",
+  "description": "Offline-first web app that recommends electronics projects from the parts you own. Matching engine verified in Node + jsdom.",
+  "private": true,
+  "scripts": {
+    "test": "node engine.test.js && node test/dom.test.js",
+    "test:engine": "node engine.test.js",
+    "test:dom": "node test/dom.test.js",
+    "serve": "python3 -m http.server 8123"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
