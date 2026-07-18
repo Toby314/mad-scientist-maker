@@ -594,6 +594,45 @@
       levelUp: 'Add WiFi to send "intrusion" to your phone with a timestamp.',
       coolness: 5, learning: 5, tags: ['security', 'rfid', 'state-machine'],
     },
+    {
+      id: 'cam_snapshot',
+      title: 'ESP32-CAM Snapshot Server',
+      blurb: 'A small webcam that serves a still image over WiFi.',
+      difficulty: 'Intermediate', buildTime: '~1 hour',
+      requiredCaps: ['camera', 'mcu-wifi'],
+      optionalCaps: ['sdcard', 'pir'],
+      concepts: ['camera driver', 'WiFi web server', 'JPEG streaming'],
+      why: 'Teaches how an MCU streams image data: the OV2640 captures a JPEG and the ESP32 serves it from a tiny web server. Great foundation for security cams or time-lapse rigs.',
+      steps: [
+        'Flash the ESP32-CAM with the CameraWebServer example.',
+        'Set your SSID/password; open the printed IP in a browser.',
+        'Trigger a snapshot from the page or a PIR interrupt.',
+      ],
+      levelUp: 'Record motion-triggered clips to the microSD card.',
+      coolness: 4, learning: 4, tags: ['camera', 'wifi', 'web'],
+      wiring: [
+        { part: 'ESP32-CAM', signal: '5V', pin: '5V', note: 'FTDI VCC → 5V' },
+        { part: 'ESP32-CAM', signal: 'Program', pin: 'GPIO 0 → GND', note: 'hold to flash' },
+      ],
+      guideUrl: 'https://www.google.com/search?q=esp32-cam+camerawebserver+tutorial',
+    },
+    {
+      id: 'zigbee_sensor',
+      title: 'Zigbee Sensor Node',
+      blurb: 'A low-power sensor that joins a Zigbee/Thread mesh.',
+      difficulty: 'Advanced', buildTime: 'a weekend',
+      requiredCaps: ['zigbee', 'sensor-temp'],
+      optionalCaps: ['battery-18650', 'sensor-humidity'],
+      concepts: ['802.15.4 mesh', 'low-power radio', 'coordinator/router'],
+      why: 'Shows a different radio than WiFi: Zigbee/Thread forms a self-healing mesh that sips power, ideal for battery sensor nodes talking to a hub. Only the C5/C6 support this radio.',
+      steps: [
+        'Start a Zigbee stack (ESP-IDF Zigbee or a coordinator hub).',
+        'Join the mesh as an end-device; read the temp (humidity) sensor.',
+        'Publish readings to the coordinator over 802.15.4.',
+      ],
+      levelUp: 'Add sleep cycling so the node runs months on a 18650.',
+      coolness: 4, learning: 5, tags: ['zigbee', 'radio', 'low-power'],
+    },
   ];
 
   return { PROJECT_CATALOG };

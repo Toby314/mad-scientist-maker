@@ -56,8 +56,32 @@
     // Arduino Uno or a bare Pi Pico (they have no WiFi). That's intentional.
     { id: 'esp32',    name: 'ESP32 Dev Board',          cat: 'mcu',
       caps: ['mcu','mcu-wifi','mcu-ble','i2c','spi','pwm','adc','touch'] },
-    { id: 'esp8266',  name: 'ESP8266 (e.g. NodeMCU)',   cat: 'mcu',
+    { id: 'esp8266',  name: 'ESP8266 (NodeMCU)',        cat: 'mcu',
       caps: ['mcu','mcu-wifi','i2c','spi','pwm','adc'] },
+    { id: 'esp32_c2', name: 'ESP32-C2',                cat: 'mcu',
+      // RISC-V, WiFi + BLE 5 (no BT Classic, no touch) — common in cheap modules.
+      caps: ['mcu','mcu-wifi','mcu-ble','i2c','spi','pwm','adc'] },
+    { id: 'esp32_c3', name: 'ESP32-C3',                cat: 'mcu',
+      // RISC-V, WiFi + BLE 5, USB-serial built in (no native USB device). No touch.
+      caps: ['mcu','mcu-wifi','mcu-ble','i2c','spi','pwm','adc'] },
+    { id: 'esp32_c5', name: 'ESP32-C5',                cat: 'mcu',
+      // RISC-V, WiFi 6 + BLE 5 + Zigbee/Thread (802.15.4). No touch.
+      caps: ['mcu','mcu-wifi','mcu-ble','zigbee','i2c','spi','pwm','adc'] },
+    { id: 'esp32_c6', name: 'ESP32-C6',                cat: 'mcu',
+      // RISC-V, WiFi 6 + BLE 5 + Zigbee/Thread (802.15.4). No touch.
+      caps: ['mcu','mcu-wifi','mcu-ble','zigbee','i2c','spi','pwm','adc'] },
+    { id: 'esp32_s3', name: 'ESP32-S3',                cat: 'mcu',
+      // Xtensa dual-core, WiFi + BLE 5, native USB (HID), 2x CAN, CAM interface, touch.
+      caps: ['mcu','mcu-wifi','mcu-ble','mcu-usb','camera','i2c','spi','pwm','adc','touch'] },
+    { id: 'esp32_cam', name: 'ESP32-CAM',              cat: 'mcu',
+      // ESP32 + OV2640 camera module; WiFi only (no BLE on the stock module).
+      caps: ['mcu','mcu-wifi','camera','i2c','spi','pwm','adc'] },
+    { id: 'wemos_d1', name: 'Wemos D1 Mini (ESP8266)', cat: 'mcu',
+      // A specific ESP8266 form factor — same caps as esp8266, listed so owners find it.
+      caps: ['mcu','mcu-wifi','i2c','spi','pwm','adc'] },
+    { id: 'nodemcu_esp32', name: 'NodeMCU ESP32',     cat: 'mcu',
+      // NodeMCU-style ESP32 breakout (ESP-WROOM-32). Full ESP32 caps.
+      caps: ['mcu','mcu-wifi','mcu-ble','i2c','spi','pwm','adc','touch'] },
     { id: 'uno',      name: 'Arduino Uno',              cat: 'mcu',
       caps: ['mcu','i2c','spi','pwm','adc'] },
     { id: 'nano',     name: 'Arduino Nano',             cat: 'mcu',
@@ -200,9 +224,12 @@
   // (b) the Smart Shopping List. One editable object = single source of truth
   // for all human-readable gap text.
   const CAPABILITY_CANONICAL = {
-    'mcu':            'Any microcontroller (ESP32, Arduino, Pi Pico, Pi, …)',
-    'mcu-wifi':       'ESP32 / ESP8266 / Pico W / Pico 2 W / Pi 3–5 / Zero 2 W (needs WiFi)',
-    'mcu-ble':        'ESP32 / Pico W / Pico 2 W / Pi 3–5 / Zero 2 W (needs Bluetooth)',
+    'mcu':            'Any microcontroller (ESP32, ESP8266, Arduino, Pi Pico, Pi, …)',
+    'mcu-wifi':       'ESP32 / ESP8266 / C2–C6 / Pico W / Pico 2 W / Pi 3–5 / Zero 2 W (needs WiFi)',
+    'mcu-ble':        'ESP32 / C2–C6 / Pico W / Pico 2 W / Pi 3–5 / Zero 2 W (needs Bluetooth)',
+    'mcu-usb':        'ESP32-S3 (native USB / HID device)',
+    'zigbee':         'ESP32-C5 / ESP32-C6 (802.15.4 / Thread / Zigbee radio)',
+    'camera':         'ESP32-S3 or ESP32-CAM (OV2640 camera module)',
     'sensor-temp':    'Temp sensor (DHT22, BME280, or DS18B20)',
     'sensor-humidity':'Humidity sensor (DHT22 or BME280)',
     'sensor-pressure':'Pressure sensor (BMP280 or BME280)',
