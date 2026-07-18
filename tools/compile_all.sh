@@ -3,7 +3,7 @@
 # Honors per-file header directives:
 #   // COMPILE_FQBN: <fqbn>   -> compile for this board (e.g. esp32:esp32:esp32cam)
 #   // COMPILE_SKIP: <reason> -> skip (e.g. needs ESP-IDF Zigbee; not buildable here)
-# Default FQBN (no directive) = esp32:esp32:esp32
+# Default FQBN (no directive) = esp32:esp32:esp32s3 (ESP32-S3 Dev Module)
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -18,7 +18,7 @@ if [ ${#inos[@]} -eq 0 ]; then echo "No sketches found."; exit 2; fi
 
 for ino in "${inos[@]}"; do
   head1="$(head -1 "$ino")"
-  fqbn="esp32:esp32:esp32"
+  fqbn="esp32:esp32:esp32s3"
 
   if echo "$head1" | grep -q "COMPILE_SKIP"; then
     echo "SKIP (directive): $ino"

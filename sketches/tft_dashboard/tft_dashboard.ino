@@ -4,12 +4,24 @@
 
 #include <LovyanGFX.hpp>
 
+// WHY: ESP32 core 3.x renamed the SPI host constants. On classic ESP32 the TFT bus
+// uses VSPI_HOST; on ESP32-S3/C3 that symbol no longer exists and it's SPI3_HOST.
+// LovyanGFX only needs "a SPI peripheral" — alias whichever this core exposes so the
+// same sketch compiles on both silicon families.
+#if defined(VSPI_HOST)
+  #define TFT_SPI_HOST VSPI_HOST
+#elif defined(SPI3_HOST)
+  #define TFT_SPI_HOST SPI3_HOST
+#else
+  #define TFT_SPI_HOST SPI2_HOST
+#endif
+
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Panel_ILI9341 _panel; lgfx::Bus_SPI _bus;
  public:
   LGFX(void) {
     auto cfg = _bus.config();
-    cfg.spi_host = VSPI_HOST; cfg.spi_mode = 0; cfg.freq_write = 40000000; cfg.freq_read = 16000000;
+    cfg.spi_host = TFT_SPI_HOST; cfg.spi_mode = 0; cfg.freq_write = 40000000; cfg.freq_read = 16000000;
     cfg.pin_sclk = 18; cfg.pin_mosi = 23; cfg.pin_miso = -1; cfg.pin_dc = 2;
     _bus.config(cfg); _panel.setBus(&_bus);
     auto p = _panel.config(); p.pin_cs = 5; p.pin_rst = 4; p.offset_rotation = 0;

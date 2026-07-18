@@ -1,29 +1,31 @@
-// COMPILE_FQBN: esp32:esp32:esp32cam
-// WHY: Turn an ESP32-CAM (AI Thinker) into a standalone Wi-Fi snapshot camera for a
-//      "mad scientist" door cam. Captures a fresh JPEG from the OV2640 and serves it
-//      over plain HTTP — no PC or cloud required. Replace the SSID/PASSWORD below.
+// COMPILE_FQBN: esp32:esp32:esp32s3
+// WHY: Turn an ESP32-S3 + OV2640 camera module (e.g. ESP32-S3-EYE style board)
+//      into a standalone Wi-Fi snapshot camera. Shows the same HTTP-served JPEG
+//      pattern as the ESP32-CAM version but with the S3 camera pin map.
+//      Replace the SSID/PASSWORD below.
 
-#define CAMERA_MODEL_AI_THINKER
+// ESP32-S3 + OV2640 (S3-EYE / generic S3 cam) pin config.
+// The ESP32-CAM's AI-Thinker pins are DIFFERENT silicon — they do NOT map to S3,
+// so we use the S3 reference pinout here.
+#define PWDN_GPIO_NUM     -1
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM     15
+#define SIOD_GPIO_NUM     4
+#define SIOC_GPIO_NUM     5
+#define Y9_GPIO_NUM       16
+#define Y8_GPIO_NUM       17
+#define Y7_GPIO_NUM       18
+#define Y6_GPIO_NUM       12
+#define Y5_GPIO_NUM       10
+#define Y4_GPIO_NUM       8
+#define Y3_GPIO_NUM       9
+#define Y2_GPIO_NUM       11
+#define VSYNC_GPIO_NUM    6
+#define HREF_GPIO_NUM     7
+#define PCLK_GPIO_NUM     13
+
 #include <WiFi.h>
 #include <esp_camera.h>
-
-// ---- AI Thinker ESP32-CAM pin config (inlined) ----
-#define PWDN_GPIO_NUM     32
-#define RESET_GPIO_NUM    -1
-#define XCLK_GPIO_NUM      0
-#define SIOD_GPIO_NUM     26
-#define SIOC_GPIO_NUM     27
-#define Y9_GPIO_NUM       35
-#define Y8_GPIO_NUM       34
-#define Y7_GPIO_NUM       39
-#define Y6_GPIO_NUM       36
-#define Y5_GPIO_NUM       21
-#define Y4_GPIO_NUM       19
-#define Y3_GPIO_NUM       18
-#define Y2_GPIO_NUM        5
-#define VSYNC_GPIO_NUM    25
-#define HREF_GPIO_NUM     23
-#define PCLK_GPIO_NUM     22
 
 const char* ssid = "YOUR_SSID";
 const char* password = "YOUR_PASSWORD";
@@ -54,7 +56,7 @@ void startCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size   = FRAMESIZE_SVGA;
   config.jpeg_quality = 12;
-  config.fb_count     = 1;
+  config.fb_count     = 2;   // S3 usually has PSRAM, so we can buffer 2 frames
 
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -85,10 +87,8 @@ void loop() {
   WiFiClient client = server.available();
   if (!client) return;
 
-  // Read the request line
   String req = client.readStringUntil('\r');
   client.readStringUntil('\n');
-  // Drain remaining HTTP headers
   while (client.available()) {
     String line = client.readStringUntil('\n');
     if (line == "\r") break;
@@ -104,7 +104,7 @@ void loop() {
     client.println("<html><body style='font-family:sans-serif'>");
     client.println("<h1>MSM Cam</h1>");
     client.println("<img src='/snapshot' width='640'>");
-    client.println("<p>Live snapshot from ESP32-CAM.</p>");
+    client.println("<p>Live snapshot from ESP32-S3.</p>");
     client.println("</body></html>");
   } else {
     client.println("HTTP/1.1 404 Not Found");
