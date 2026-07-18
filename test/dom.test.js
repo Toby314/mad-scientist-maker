@@ -108,15 +108,40 @@ console.log('   owned count after uncheck =', after);
 assert(/6 parts owned/.test(after), 'unchecking drops count to 6 and recomputes (no crash)');
 
 console.log('\n=== TEST 6 (v2): quantity stepper changes owned count ===');
-const ledRow = Array.from(doc.querySelectorAll('#inventory-groups .part'))
-  .find(r => /LED/.test(r.textContent));
-assert(ledRow, 'an LED inventory row exists');
-const plus = ledRow.querySelector('.qtybtn:last-child');
+assert(Array.from(doc.querySelectorAll('#inventory-groups .part')).some(r => /LED/.test(r.textContent)), 'an LED inventory row exists');
+// Helpers that ALWAYS re-query the live DOM (renderInventoryNow replaces nodes on every change).
+const ledRow = () => Array.from(doc.querySelectorAll('#inventory-groups .part')).find(x => /LED/.test(x.textContent));
+const qtyOf = () => Number(ledRow().querySelector('.qtyval').textContent);
+const cbOf = () => ledRow().querySelector('input[type=checkbox]');
+const plusBtn = () => ledRow().querySelector('.qtybtn:last-child');
+const minusBtn = () => ledRow().querySelector('.qtybtn:first-child');
+const click = (node) => node.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+const start = qtyOf();
+console.log('   LED qty before + =', start, '(sample inventory seeds led:1)');
 const beforeTxt = doc.getElementById('owned-count').textContent;
-plus.dispatchEvent(new window.Event('click', { bubbles: true }));
+click(plusBtn());
 const afterTxt = doc.getElementById('owned-count').textContent;
 console.log('   owned before/after LED + =', beforeTxt, '->', afterTxt);
 assert(beforeTxt !== afterTxt, 'clicking + on a part increments owned count (qty model works)');
+// REGRESSION: the qty <span> in the row must visibly update after the click.
+console.log('   after +: qtyval =', qtyOf(), '| checkbox checked =', cbOf().checked, '| minus enabled =', !minusBtn().disabled);
+assert(qtyOf() === start + 1, 'LED qty <span> increments by 1 after clicking + (regression: was stuck)');
+assert(cbOf().checked === true, 'LED checkbox becomes/ stays checked after +');
+assert(minusBtn().disabled === false, 'LED minus button enables once owned');
+// second + -> +2 (re-query the button each time because the grid re-renders)
+click(plusBtn());
+assert(qtyOf() === start + 2, 'second + steps LED qty up by another 1');
+// minus back down to 0 removes it: -1 -> start+1, -1 -> start, -1 -> 0
+click(minusBtn());
+assert(qtyOf() === start + 1, 'first minus steps back by 1');
+click(minusBtn());
+assert(qtyOf() === start, 'second minus returns to the seeded start qty');
+click(minusBtn());
+const at0 = qtyOf();
+console.log('   after 3x minus: qtyval =', at0, '| checkbox checked =', cbOf().checked);
+assert(at0 === 0, 'minus down to 0 removes the LED from owned');
+assert(cbOf().checked === false, 'LED unchecked again at 0');
 
 console.log('\n=== TEST 7 (v2): hash route opens detail view with wiring table ===');
 window.location.hash = '#/project/weather_station';

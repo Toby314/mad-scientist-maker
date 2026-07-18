@@ -47,6 +47,7 @@
     // v2: renderInventory now takes the owned MAP and a setQty callback.
     UI.renderInventory(groupsEl, state.owned, (id, qty) => {
       Inv.setQty(state, id, qty);
+      renderInventoryNow();   // re-render grid so qty text + checkbox + minus-disable update
       recompute();
     });
   }
