@@ -101,7 +101,6 @@ This app is built in spec-first phases. Current milestone:
 | 3B — Custom parts | Guided capability checklist + preset (no token memorizing) | ✅ done |
 | 3D — CYD first-class | "Optimize for CYD" toggle, re-rank screen builds, 🟡 badge, focus panel | ✅ done |
 | 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ⏳ next |
-| — — Insurance one-pagers | Static FB promo graphics for Kotraba Insurance Agency | ⏳ pending |
 
 **Phase 3 (current release) ships:** 67 parts, 33 catalog projects, 33 verified
 ESP32-S3 sketches, custom-part creator, and CYD-first recommendations.
@@ -228,5 +227,4 @@ mad-scientist-maker/
 - ✅ **CYD first-class mode** — ranked screen builds + 🟡 badge (Phase 3D).
 
 **Next up (Phase 4):** iPhone/PWA polish — install prompt, larger touch targets,
-and a proven offline-cache round-trip; plus static FB promo one-pagers for
-Kotraba Insurance Agency.
+and a proven offline-cache round-trip.
