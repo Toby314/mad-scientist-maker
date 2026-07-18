@@ -100,7 +100,8 @@ This app is built in spec-first phases. Current milestone:
 | 3A — Sketch library | 33 Arduino/C++ sketches, **all compile-verified on ESP32-S3**, wired into detail view with Copy button | ✅ done |
 | 3B — Custom parts | Guided capability checklist + preset (no token memorizing) | ✅ done |
 | 3D — CYD first-class | "Optimize for CYD" toggle, re-rank screen builds, 🟡 badge, focus panel | ✅ done |
-| 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ⏳ next |
+| 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ✅ done (v4.0.0) |
+| 5 — Gap-closing | "Why it fits" reasoning + teach-me, fuzzy/semantic search, datasheet→catalog import + graph, PCB/BOM assist, desktop/MCP packaging | 📋 planned |
 
 **Phase 3 (current release) ships:** 67 parts, 33 catalog projects, 33 verified
 ESP32-S3 sketches, custom-part creator, and CYD-first recommendations.
@@ -225,6 +226,10 @@ mad-scientist-maker/
 - ✅ **Difficulty/interest filters** and a topic picker (Phase 2A).
 - ✅ **Tag-based "what should I learn next?"** path through the catalog (Learning Paths tab).
 - ✅ **CYD first-class mode** — ranked screen builds + 🟡 badge (Phase 3D).
+- ✅ **iPhone/PWA polish** — install prompt, iOS Safari "Add to Home Screen"
+  hint, 44px touch targets, responsive ≤480px, and a proven offline-cache check
+  (every load-bearing asset is precached; app runs offline) — Phase 4, v4.0.0.
 
-**Next up (Phase 4):** iPhone/PWA polish — install prompt, larger touch targets,
-and a proven offline-cache round-trip.
+**Next up (Phase 5):** see [`plans/phase5.md`](plans/phase5.md) — close gaps the
+competitive scan exposed (reasoning/teach-me, fuzzy search, datasheet import +
+knowledge graph, PCB/BOM assist, desktop + MCP packaging).

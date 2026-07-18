@@ -3,14 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <!-- viewport: makes it responsive on phone + desktop -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Mad Scientist Maker ⚗</title>
   <meta name="description" content="Recommend electronics projects from the parts you already own. Offline-first, teaches the WHY." />
   <!-- PWA manifest (only honored when served over http(s); harmless on file://) -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0b0e14" />
   <link rel="icon" href="icon-192.png" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
+  <!-- Phase 4C: iOS Safari standalone launch + home-screen icon -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Mad Scientist" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -25,6 +30,23 @@
     </div>
     <div id="owned-count" class="owned-count">0 parts owned</div>
   </header>
+
+  <!-- ===================== INSTALL BANNER (Phase 4A) ===================== -->
+  <!-- 2 states: a real "Install" button (Android/Chrome/Edge) or an iOS hint
+       (Safari on iPhone never fires beforeinstallprompt, so we tell the user
+       the manual Share -> Add to Home Screen path). JS toggles which shows. -->
+  <div id="install-banner" class="install-banner" hidden>
+    <div class="install-text">
+      <strong id="install-title">Install Mad Scientist Maker</strong>
+      <span id="install-sub" class="muted"></span>
+    </div>
+    <button id="btn-install" class="btn small">Install</button>
+    <button id="install-dismiss" class="install-dismiss" aria-label="Dismiss">×</button>
+  </div>
+  <div id="ios-hint" class="ios-hint" hidden>
+    <span>📲 To install: tap <b>Share</b> ⤴ then <b>“Add to Home Screen”</b>.</span>
+    <button id="ios-hint-dismiss" class="install-dismiss" aria-label="Dismiss">×</button>
+  </div>
 
   <!-- ===================== TAB BAR ===================== -->
   <nav class="tabs" role="tablist">

@@ -325,3 +325,56 @@ main { max-width: 1100px; margin: 0 auto; padding: 18px; }
 .cyd-panel .cyd-link { color: var(--cyan); text-decoration: none; }
 .cyd-panel .cyd-link:hover { text-decoration: underline; }
 .cyd-panel .cyd-off { font-size: .85rem; }
+
+/* ---- Phase 4A: install banner + iOS hint + 44px touch targets ---- */
+.install-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cyan);
+  border-radius: var(--radius);
+  padding: 10px 12px; margin: 10px;
+}
+.install-banner .install-text { flex: 1; min-width: 0; line-height: 1.3; }
+.install-banner .install-text .muted { display: block; font-size: .82rem; }
+.install-dismiss {
+  background: transparent; border: none; color: var(--muted);
+  font-size: 1.3rem; line-height: 1; padding: 6px 8px; cursor: pointer;
+}
+.ios-hint {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,200,255,.08);
+  border: 1px solid rgba(0,200,255,.35);
+  border-radius: var(--radius);
+  padding: 10px 12px; margin: 10px; font-size: .9rem;
+}
+.ios-hint span { flex: 1; }
+
+/* ---- Phase 4B: responsive layout (phones, <=480px) ---- */
+@media (max-width: 480px) {
+  .app-header { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .owned-count { align-self: flex-start; }
+  .tabs { flex-wrap: wrap; }
+  .tab { flex: 1 1 auto; min-width: 44%; text-align: center; font-size: .9rem; }
+  .toolbar.filters { flex-wrap: wrap; }
+  .filter-label { width: 100%; }
+  .filter-select { width: 100%; }
+  .cards { grid-template-columns: 1fr; }
+  .sketch .code-block { font-size: .76rem; }   /* smaller mono on tiny screens */
+  .cyd-panel { margin: 10px 8px; }
+  #inventory-groups .part { flex-wrap: wrap; }
+  .custom-form { display: flex; flex-direction: column; gap: 8px; }
+  .detail-grid { grid-template-columns: 1fr; }
+}
+/* Touch targets: Apple HIG minimum 44x44pt for anything tappable. */
+.tab, .btn, .filter-select, .f-diff, .chk, .row-toggle, .install-dismiss,
+.install-banner .btn, .custom-form .btn, .toolbar .btn, .card .more,
+.guide-link, .morelike-link, .cyd-link, .copy-btn, #f-clear {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+/* Buttons that are inline text keep a comfortable tap area without huge boxes. */
+.install-dismiss, .card .more, .copy-btn, .cyd-link, .morelike-link, #f-clear {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px;
+}

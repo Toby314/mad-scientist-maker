@@ -393,6 +393,69 @@
     window.addEventListener('load', registerSW);
   }
 
+  // ---- PWA INSTALL (Phase 4A) ----
+  // WHY TWO PATHS: Chrome/Edge/Android fire `beforeinstallprompt` and let us
+  // show a real Install button. Safari on iOS NEVER fires it — the only way to
+  // install a PWA there is the manual Share -> Add to Home Screen gesture. So we
+  // detect iOS Safari and show a one-time hint instead of a dead button.
+  let deferredPrompt = null;
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+
+  function showInstallUI() {
+    const banner = document.getElementById('install-banner');
+    const iosHint = document.getElementById('ios-hint');
+    if (!banner || !iosHint) return;
+    // Respect a prior dismissal for this browser session.
+    if (sessionStorage.getItem('msm.installDismissed')) return;
+    if (isIOS && isSafari) {
+      iosHint.hidden = false;        // iOS: manual gesture hint
+    } else if (deferredPrompt) {
+      banner.hidden = false;          // Chromium: real Install button
+      document.getElementById('install-sub').textContent =
+        'Use it offline, on your home screen.';
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();              // stop the browser's mini-infobar
+    deferredPrompt = e;
+    showInstallUI();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    const b = document.getElementById('install-banner');
+    const h = document.getElementById('ios-hint');
+    if (b) b.hidden = true;
+    if (h) h.hidden = true;
+  });
+
+  const btnInstall = document.getElementById('btn-install');
+  if (btnInstall) btnInstall.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    const b = document.getElementById('install-banner');
+    if (b) b.hidden = true;
+  });
+  function dismissInstall() {
+    sessionStorage.setItem('msm.installDismissed', '1');
+    const b = document.getElementById('install-banner');
+    const h = document.getElementById('ios-hint');
+    if (b) b.hidden = true;
+    if (h) h.hidden = true;
+  }
+  const d1 = document.getElementById('install-dismiss');
+  const d2 = document.getElementById('ios-hint-dismiss');
+  if (d1) d1.addEventListener('click', dismissInstall);
+  if (d2) d2.addEventListener('click', dismissInstall);
+  // If already installable-capable but the event was missed (e.g. cached), show
+  // on load once SW is ready (Chromium only).
+  showInstallUI();
+
   // ---- INITIAL RENDER ----
   Detail.init();          // v2: hash routing + card-click -> detail view
   renderInventoryNow();

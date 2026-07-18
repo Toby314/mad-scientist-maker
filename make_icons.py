@@ -63,3 +63,7 @@ def make_icon(size):
 for sz in (192, 512):
     make_icon(sz).save(f"/home/toby/projects/mad-scientist-maker/icon-{sz}.png")
     print("wrote icon", sz)
+
+# Apple touch icon: 180x180, opaque (iOS masks corners itself). Same beaker art.
+make_icon(180).convert("RGBA").save("/home/toby/projects/mad-scientist-maker/apple-touch-icon.png")
+print("wrote apple-touch-icon 180")

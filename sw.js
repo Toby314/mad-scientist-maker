@@ -13,7 +13,7 @@
  * set of static files; for an API-backed app you'd use network-first instead.)
  * ===========================================================================*/
 
-const CACHE = 'msm-v2';
+const CACHE = 'msm-v3';
 const SHELL = [
   './',
   'index.html',
@@ -26,9 +26,11 @@ const SHELL = [
   'js/ui.js',
   'js/detail.js',
   'js/app.js',
+  'js/sketches-data.js',
   'manifest.webmanifest',
   'icon-192.png',
   'icon-512.png',
+  'apple-touch-icon.png',
 ];
 
 self.addEventListener('install', event => {

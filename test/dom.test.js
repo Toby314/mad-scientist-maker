@@ -275,6 +275,29 @@ assert(badgesOff === 0, 'no CYD badges shown when mode is off');
 doc.querySelector('.tab[data-tab="settings"]').click();
 doc.getElementById('chk-cyd').click();
 
+console.log('\n=== TEST 16 (4A): install UI surfaces on the page ===');
+const banner = doc.getElementById('install-banner');
+const iosHint = doc.getElementById('ios-hint');
+const btnInstall = doc.getElementById('btn-install');
+assert(!!banner, 'install banner element exists');
+assert(!!iosHint, 'iOS hint element exists');
+assert(!!btnInstall, 'Install button exists');
+assert(iosHint.hidden === true, 'iOS hint hidden by default (only shown on iOS Safari)');
+// Stub a beforeinstallprompt + dispatch: banner should reveal (Chromium path).
+let captured = null;
+window.addEventListener('beforeinstallprompt', e => { captured = e; });
+const fakeEvt = { preventDefault() {}, prompt() { return Promise.resolve(); }, userChoice: Promise.resolve({ outcome: 'accepted' }) };
+const evt = new window.Event('beforeinstallprompt');
+Object.assign(evt, fakeEvt);
+window.dispatchEvent(evt);
+assert(banner.hidden === false, 'dispatching beforeinstallprompt reveals the Install banner');
+// Dismiss works + persists for the session.
+doc.getElementById('install-dismiss').click();
+assert(banner.hidden === true, 'dismiss hides the install banner');
+const css = fs.readFileSync(path.join(APP, 'css/styles.css'), 'utf8');
+assert(/min-height:\s*44px/.test(css), 'CSS enforces 44px min-height touch targets');
+assert(/@media\s*\(max-width:\s*480px\)/.test(css), 'CSS has a <=480px responsive breakpoint');
+
 console.log('\n=== DONE ===');
 // TEST 12 (2C) async import round-trip — run before printing final verdict.
 // Reload the sample so the exported state is deterministic, then re-import it.
