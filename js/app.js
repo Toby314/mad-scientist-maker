@@ -29,11 +29,23 @@
 
   // ---- RECOMPUTE + RENDER (called on every state change) ----
   let lastResult = null;
+  // Phase 2A: display filter (difficulty + topic). Engine still ranks the FULL
+  // set; filtering only narrows what's drawn, so the honest counts stay visible.
+  let filter = { difficulties: [], tags: [] };
+
+  function currentFilter() {
+    const diffs = Array.from(document.querySelectorAll('.f-diff:checked')).map(c => c.value);
+    const topic = (document.getElementById('f-topic') || {}).value || '';
+    return { difficulties: diffs, tags: topic ? [topic] : [] };
+  }
+
   function recompute() {
     // v2: analyze() takes the owned qty map directly.
     lastResult = E.analyze(state.owned, state.custom);
-    UI.renderProjects(lastResult, buildableEl, nearEl, summaryEl);
+    filter = currentFilter();
+    UI.renderProjects(lastResult, buildableEl, nearEl, summaryEl, 4, filter);
     UI.renderShopping(shoppingEl, lastResult.shoppingList);
+    UI.renderLearningPaths(document.getElementById('learning-paths'), E.learningPaths(lastResult.buildable.map(r => r.project.id)));
     const total = Object.values(state.owned).reduce((a, q) => a + q, 0);
     ownedCount.textContent = total + ' part' + (total === 1 ? '' : 's') + ' owned';
   }
@@ -45,12 +57,50 @@
   // ---- INVENTORY rendering + qty ----
   function renderInventoryNow() {
     // v2: renderInventory now takes the owned MAP and a setQty callback.
-    UI.renderInventory(groupsEl, state.owned, (id, qty) => {
-      Inv.setQty(state, id, qty);
-      renderInventoryNow();   // re-render grid so qty text + checkbox + minus-disable update
-      recompute();
-    });
+    // Phase 2B: also render custom parts with their own qty/edit/remove handlers.
+    UI.renderInventory(
+      groupsEl, state.owned,
+      (id, qty) => {
+        Inv.setQty(state, id, qty);
+        renderInventoryNow();   // re-render grid so qty text + checkbox + minus-disable update
+        recompute();
+      },
+      state.custom,
+      (idx, qty) => {
+        // custom part qty is clamped >= 1 by inventory.js normalize on save,
+        // but we guard here so the stepper can't go to 0 and hide it.
+        state.custom[idx].qty = Math.max(1, qty);
+        Inv.save(state);
+        renderInventoryNow();
+        recompute();
+      },
+      (idx) => {
+        state.custom.splice(idx, 1);
+        Inv.save(state);
+        renderInventoryNow();
+        recompute();
+        toast('Custom part removed');
+      }
+    );
   }
+
+  // ---- Phase 2B: add a custom part from the form ----
+  function addCustomPart() {
+    const nameEl = document.getElementById('custom-name');
+    const capsEl = document.getElementById('custom-caps');
+    const name = nameEl.value.trim();
+    const capsRaw = capsEl.value.trim();
+    if (!name) { toast('Give the part a name'); nameEl.focus(); return; }
+    const caps = capsRaw.split(',').map(s => s.trim()).filter(Boolean);
+    if (!caps.length) { toast('Add at least one capability token'); capsEl.focus(); return; }
+    state.custom = state.custom || [];
+    state.custom.push({ name, caps, qty: 1 });
+    Inv.save(state);
+    nameEl.value = ''; capsEl.value = '';
+    renderInventoryNow(); recompute();
+    toast('Added "' + name + '" — it now counts toward matching');
+  }
+  document.getElementById('btn-custom-add').addEventListener('click', addCustomPart);
 
   // ---- TAB switching ----
   function showTab(name) {
@@ -60,6 +110,19 @@
   }
   document.querySelectorAll('.tab').forEach(t =>
     t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+  // ---- Phase 2A: filters re-render project lists live (engine untouched) ----
+  document.querySelectorAll('.f-diff').forEach(c =>
+    c.addEventListener('change', () => { filter = currentFilter(); recompute(); }));
+  const topicSel = document.getElementById('f-topic');
+  if (topicSel) topicSel.addEventListener('change', () => { filter = currentFilter(); recompute(); });
+  const clearFilters = document.getElementById('f-clear');
+  if (clearFilters) clearFilters.addEventListener('click', () => {
+    document.querySelectorAll('.f-diff').forEach(c => { c.checked = false; });
+    if (topicSel) topicSel.value = '';
+    filter = { difficulties: [], tags: [] };
+    recompute();
+  });
 
   // ---- TOAST (tiny feedback) ----
   let toastTimer = null;
@@ -149,27 +212,52 @@
     renderInventoryNow(); recompute(); toast('Reset complete');
   });
 
-  // ---- AI "Surprise me" button (injected into Projects tab header) ----
-  // We add it only when a key is present; otherwise a gentle hint stands in.
-  function ensureAiButton() {
-    if (document.getElementById('btn-ai')) return;
+  // ---- "Surprise me" (Phase 2A) ----
+  // Two flavours, both clearly labelled:
+  //   1) OFFLINE: pick a random buildable/near project you can actually do —
+  //      always available, no key, great for "just give me something to build".
+  //   2) AI: invent brand-new ideas from your parts (only if an API key is set).
+  function ensureSurprise() {
+    if (document.getElementById('btn-surprise')) return;
     const head = document.querySelector('#tab-projects h2.section-title'); // first h2 = Buildable Now
-    const btn = document.createElement('button');
-    btn.id = 'btn-ai'; btn.className = 'btn ghost'; btn.style.marginLeft = '10px';
-    btn.textContent = '✨ Surprise me (AI)';
-    btn.addEventListener('click', runAi);
-    head.appendChild(btn);
+    const wrap = document.createElement('span');
+    wrap.style.marginLeft = '10px';
+    wrap.style.display = 'inline-flex';
+    wrap.style.gap = '8px';
+    wrap.style.verticalAlign = 'middle';
+
+    const offline = document.createElement('button');
+    offline.id = 'btn-surprise'; offline.className = 'btn ghost small';
+    offline.textContent = '🎲 Surprise me';
+    offline.addEventListener('click', runSurprise);
+    wrap.appendChild(offline);
+
+    if (AI.hasKey()) {
+      const ai = document.createElement('button');
+      ai.id = 'btn-ai'; ai.className = 'btn ghost small';
+      ai.textContent = '✨ Surprise me (AI)';
+      ai.addEventListener('click', runAi);
+      wrap.appendChild(ai);
+    } else {
+      const hint = document.createElement('span');
+      hint.id = 'ai-hint'; hint.className = 'muted';
+      hint.style.fontSize = '.8rem';
+      hint.textContent = ' · add an API key in ⚙️ Settings for AI ideas';
+      wrap.appendChild(hint);
+    }
+    head.appendChild(wrap);
   }
-  function ensureAiHint() {
-    if (document.getElementById('ai-hint')) return;
-    const head = document.querySelector('#tab-projects h2.section-title');
-    const span = document.createElement('span');
-    span.id = 'ai-hint'; span.className = 'muted';
-    span.style.marginLeft = '10px'; span.style.fontSize = '.8rem';
-    span.textContent = ' · add an API key in ⚙️ Settings to unlock AI ideas';
-    head.appendChild(span);
+
+  function runSurprise() {
+    if (!lastResult) return;
+    const pool = lastResult.buildable.concat(lastResult.couldve);
+    if (!pool.length) { toast('Load inventory first to get a surprise'); return; }
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    location.hash = '#/project/' + pick.project.id;
+    toast('🎲 ' + pick.project.title);
   }
-  if (AI.hasKey()) ensureAiButton(); else ensureAiHint();
+
+  if (AI.hasKey()) ensureSurprise(); else ensureSurprise();
 
   async function runAi() {
     if (!AI.hasKey()) { toast('Add an API key in Settings first'); return; }

@@ -154,5 +154,79 @@ const guide = detail.querySelector('.guide-link');
 assert(guide && /guide/i.test(guide.textContent), 'detail view shows a clickable "Full assembly guide" link');
 assert(detail.classList.contains('active'), 'detail panel becomes active on hash route');
 
+console.log('\n=== TEST 8 (2A): difficulty + topic filters narrow the list ===');
+// Reset to the full sample (earlier tests may have unchecked esp32).
+doc.getElementById('btn-sample').click();
+// Input: check "Advanced" only -> buildable cards should drop to 0 (sample has none).
+const adv = doc.querySelector('.f-diff[value="Advanced"]');
+adv.checked = true;
+adv.dispatchEvent(new window.Event('change'));
+const filteredBuild = doc.querySelectorAll('#buildable-list .card.buildable').length;
+console.log('   buildable cards when Advanced-only =', filteredBuild);
+assert(filteredBuild === 0, 'Advanced-only filter hides the beginner/intermediate sample buildables');
+assert(/filtered/.test(doc.getElementById('projects-summary').textContent), 'summary shows a "filtered" note');
+// Clear it.
+doc.getElementById('f-clear').click();
+assert(doc.querySelectorAll('#buildable-list .card.buildable').length === 6, 'Clear filters restores all 6 buildable');
+
+console.log('\n=== TEST 9 (2A): topic filter keeps only matching projects ===');
+const sel = doc.getElementById('f-topic');
+sel.value = 'sensors';
+sel.dispatchEvent(new window.Event('change'));
+const sensorTitles = Array.from(doc.querySelectorAll('#buildable-list .card.buildable h3')).map(n => n.textContent);
+console.log('   sensor-filtered buildables =', sensorTitles.join(' | '));
+assert(sensorTitles.includes('Mini Weather Station'), 'sensors filter keeps weather_station (it is a sensors project)');
+assert(!sensorTitles.some(t => /Blink/.test(t)), 'sensors filter drops non-sensor projects like Blink + Button');
+doc.getElementById('f-clear').click();
+
+console.log('\n=== TEST 10 (2A): offline "Surprise me" opens a project ===');
+doc.getElementById('btn-surprise').click();
+assert(/^#\/project\//.test(window.location.hash), 'Surprise me routes to a project detail via hash');
+doc.getElementById('tab-projects').classList.add('active'); // back to projects for remaining tests
+window.location.hash = '';
+
+console.log('\n=== TEST 11 (2B): add a custom part and see it match ===');
+// Add a custom part that supplies display-spi-tft (a CYD-like board).
+doc.getElementById('custom-name').value = 'Mystery Board X';
+doc.getElementById('custom-caps').value = 'mcu, mcu-wifi, display-spi-tft';
+doc.getElementById('btn-custom-add').click();
+const customRow = Array.from(doc.querySelectorAll('#inventory-groups .custom-part')).find(r => /Mystery Board X/.test(r.textContent));
+assert(!!customRow, 'custom part appears in the inventory grid');
+assert(/mcu, mcu-wifi, display-spi-tft/.test(customRow.textContent), 'custom part shows its caps');
+// The TFT Dashboard needs display-spi-tft; before the custom part it was a near-miss.
+// Recompute already ran; confirm it is now buildable (sample had no TFT before).
+// Need sample loaded (it is from TEST 2). Go to projects + check.
+const tftBuildable = Array.from(doc.querySelectorAll('#buildable-list .card.buildable h3')).some(n => /TFT Touch Dashboard/.test(n.textContent));
+console.log('   TFT Touch Dashboard buildable after adding custom board =', tftBuildable);
+assert(tftBuildable, 'adding a custom display-spi-tft part makes TFT Dashboard buildable');
+// Remove it again.
+const delBtn = customRow.querySelector('.qtybtn.del');
+delBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
+assert(!Array.from(doc.querySelectorAll('#inventory-groups .custom-part')).some(r => /Mystery Board X/.test(r.textContent)), 'custom part removed on × click');
+
+console.log('\n=== TEST 12 (2C): import round-trip restores inventory ===');
+console.log('   (async import verified below with the final summary)');
+
+console.log('\n=== TEST 13 (2D): Learning Paths tab renders + marks done steps ===');
+doc.querySelector('.tab[data-tab="paths"]').click(); // showTab is private to app.js
+const pathCards = doc.querySelectorAll('#learning-paths .card.path-card');
+console.log('   learning path cards =', pathCards.length);
+assert(pathCards.length === 6, 'all 6 curated learning paths render');
+// With sample inventory, weather_station is buildable -> the sensors path should mark it done.
+const sensorsPath = Array.from(pathCards).find(c => /Sense the World/.test(c.textContent));
+const doneTags = sensorsPath ? sensorsPath.querySelectorAll('.path-tag.done').length : 0;
+console.log('   "done" steps in Sense the World path =', doneTags);
+assert(doneTags >= 1, 'Sense the World path marks at least one buildable step done (weather_station)');
+assert(sensorsPath.querySelector('.path-link').getAttribute('href').startsWith('#/project/'), 'learning path steps link to project detail');
+
 console.log('\n=== DONE ===');
-if (process.exitCode) console.log('SOME TESTS FAILED'); else console.log('ALL DOM TESTS PASSED');
+// TEST 12 (2C) async import round-trip — run before printing final verdict.
+// Reload the sample so the exported state is deterministic, then re-import it.
+doc.getElementById('btn-sample').click();
+const exported = window.localStorage.getItem('msm.inventory.v2'); // the app's live saved state
+window.FileReader = class { readAsText() { this.result = exported; this.onload && this.onload(); } };
+window.Inventory.importFromFile({ name: 'inv.json', size: exported.length }).then(s => {
+  assert(s.owned && s.owned.esp32 === 1, 'import round-trip keeps esp32:1 from exported sample');
+  if (process.exitCode) console.log('SOME TESTS FAILED'); else console.log('ALL DOM TESTS PASSED');
+}).catch(e => { console.error('FAIL: import round-trip threw', e.message); process.exitCode = 1; console.log('SOME TESTS FAILED'); });
+

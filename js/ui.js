@@ -36,8 +36,11 @@
     return out;
   }
 
-  // ---------------- INVENTORY (v2: quantity steppers) ----------------
-  function renderInventory(groupsEl, ownedMap, onSetQty) {
+  // ---------------- INVENTORY (v2: quantity steppers + custom parts) ----------------
+  // onSetQty(id, qty)        -> standard taxonomy part (qty 0 = remove)
+  // onCustom(idx, qty)       -> a custom part (qty clamped >=1)
+  // onCustomRemove(idx)      -> delete a custom part
+  function renderInventory(groupsEl, ownedMap, onSetQty, customParts, onCustom, onCustomRemove) {
     groupsEl.innerHTML = '';
     T.CATEGORIES.forEach(cat => {
       const parts = T.PARTS.filter(p => p.cat === cat.id);
@@ -69,6 +72,38 @@
       });
       groupsEl.appendChild(box);
     });
+
+    // ---- USER CUSTOM PARTS (Phase 2B) ----
+    // These are boards the taxonomy doesn't list (your mystery ESP32s, salvaged
+    // modules). They carry their own caps, so the engine already matches them;
+    // here we just let you SEE + adjust + remove them next to the stock parts.
+    if (Array.isArray(customParts) && customParts.length) {
+      const box = el('div', 'cat custom-cat');
+      box.appendChild(el('h3', null, escapeHtml('Your custom parts')));
+      customParts.forEach((part, idx) => {
+        const qty = Math.max(1, part.qty || 1);
+        const row = el('div', 'part custom-part');
+        const caps = (part.caps || []).join(', ');
+        row.appendChild(el('span', 'custom-name', escapeHtml(part.name) + (caps ? ' <span class="muted">(' + escapeHtml(caps) + ')</span>' : '')));
+
+        const stepper = el('span', 'qty');
+        const minus = el('button', 'qtybtn', '−');
+        const val = el('span', 'qtyval', String(qty));
+        const plus = el('button', 'qtybtn', '+');
+        minus.addEventListener('click', (e) => { e.preventDefault(); onCustom(idx, qty - 1); });
+        plus.addEventListener('click', (e) => { e.preventDefault(); onCustom(idx, qty + 1); });
+        stepper.appendChild(minus); stepper.appendChild(val); stepper.appendChild(plus);
+        row.appendChild(stepper);
+
+        const del = el('button', 'qtybtn del', '×');
+        del.title = 'Remove this custom part';
+        del.addEventListener('click', (e) => { e.preventDefault(); onCustomRemove(idx); });
+        row.appendChild(del);
+
+        box.appendChild(row);
+      });
+      groupsEl.appendChild(box);
+    }
   }
 
   // ---------------- ONE PROJECT CARD ----------------
@@ -152,32 +187,49 @@
     return card;
   }
 
-  // ---------------- PROJECTS TAB ----------------
+  // ---------------- PROJECTS TAB (v2: filter-aware) ----------------
   // maxNear = how many near-misses to show initially (v2: capped because the
   // 1–3 gap window can surface many). Extra ones are revealed by "Show more".
-  function renderProjects(result, buildableList, nearList, summaryEl, maxNear) {
+  // filter = { difficulties:[], tags:[] } from Phase 2A; applied for DISPLAY only
+  // (the engine still ranks the full set, so counts stay honest).
+  function renderProjects(result, buildableList, nearList, summaryEl, maxNear, filter) {
     if (maxNear == null) maxNear = 4;
+    if (filter == null) filter = {};
     buildableList.innerHTML = '';
     nearList.innerHTML = '';
 
-    const nBuild = result.buildable.length;
-    const nNear = result.couldve.length;
+    const allBuild = result.buildable;
+    const allNear = result.couldve;
+    const shownBuild = E.filterProjects(allBuild, filter);
+    const shownNear = E.filterProjects(allNear, filter);
+
+    const nBuild = allBuild.length;
+    const nNear = allNear.length;
+    const fb = filter.difficulties && filter.difficulties.length;
+    const ft = filter.tags && filter.tags.length;
     summaryEl.innerHTML =
-      `<span class="muted">✅ ${nBuild} buildable &nbsp;·&nbsp; 🔬 ${nNear} near-miss${nNear === 1 ? '' : 'es'}</span>`;
+      `<span class="muted">✅ ${nBuild} buildable &nbsp;·&nbsp; 🔬 ${nNear} near-miss${nNear === 1 ? '' : 'es'}` +
+      (fb || ft ? ` &nbsp;·&nbsp; <b>filtered</b> showing ${shownBuild.length} / ${nBuild} buildable` : '') +
+      `</span>`;
 
     if (nBuild === 0) {
       buildableList.appendChild(el('div', 'empty',
         'No buildable projects yet. Tick more parts in 🧪 Inventory — or check the 🔬 near-misses below for what to buy next.'));
+    } else if (shownBuild.length === 0) {
+      buildableList.appendChild(el('div', 'empty',
+        'No buildable projects match this filter. Widen it or tick more parts.'));
     } else {
-      result.buildable.forEach(r => buildableList.appendChild(projectCard(r, 'buildable')));
+      shownBuild.forEach(r => buildableList.appendChild(projectCard(r, 'buildable')));
     }
 
     if (nNear === 0) {
       nearList.appendChild(el('div', 'empty',
         'Nothing just out of reach — nice, your inventory covers a lot!'));
+    } else if (shownNear.length === 0) {
+      nearList.appendChild(el('div', 'empty', 'No near-misses match this filter.'));
     } else {
-      const shown = result.couldve.slice(0, maxNear);
-      const hidden = result.couldve.slice(maxNear);
+      const shown = shownNear.slice(0, maxNear);
+      const hidden = shownNear.slice(maxNear);
       shown.forEach(r => nearList.appendChild(nearCard(r)));
       if (hidden.length) {
         const more = el('button', 'btn ghost', `Show ${hidden.length} more near-miss…`);
@@ -188,6 +240,29 @@
         nearList.appendChild(more);
       }
     }
+  }
+
+  // ---------------- LEARNING PATHS (Phase 2D teaching layer) ----------------
+  function renderLearningPaths(container, paths) {
+    container.innerHTML = '';
+    paths.forEach(path => {
+      const card = el('div', 'card path-card');
+      card.appendChild(el('h3', null, escapeHtml(path.title)));
+      card.appendChild(el('p', 'blurb', escapeHtml(path.desc)));
+      const ol = el('ol', 'steps path-steps');
+      path.steps.forEach(step => {
+        const li = document.createElement('li');
+        li.className = 'path-step ' + step.status;
+        const a = el('a', 'path-link', escapeHtml(step.title));
+        a.href = '#/project/' + step.id;
+        li.appendChild(a);
+        const tag = el('span', 'path-tag ' + step.status, step.status === 'done' ? '✓ done' : 'to do');
+        li.appendChild(tag);
+        ol.appendChild(li);
+      });
+      card.appendChild(ol);
+      container.appendChild(card);
+    });
   }
 
   // ---------------- SHOPPING LIST ----------------
@@ -213,6 +288,6 @@
   }
 
   root.UI = {
-    renderInventory, projectCard, nearCard, renderProjects, renderShopping, escapeHtml,
+    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, escapeHtml,
   };
 })(window);

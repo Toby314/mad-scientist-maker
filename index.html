@@ -30,6 +30,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab" data-tab="inventory" role="tab">🧪 Inventory</button>
     <button class="tab" data-tab="projects"  role="tab">💡 Projects</button>
+    <button class="tab" data-tab="paths"     role="tab">🎓 Learning</button>
     <button class="tab" data-tab="shopping"  role="tab">🛒 Shopping</button>
     <button class="tab" data-tab="settings"  role="tab">⚙️ Settings</button>
   </nav>
@@ -49,11 +50,55 @@
         </label>
       </div>
       <p class="hint">Tick the parts you own. Basics (breadboard, jumper wires, USB cable, hookup wire) are assumed &mdash; you don&rsquo;t need to tick those. Results update live.</p>
+
+      <details class="custom-add">
+        <summary>➕ Add a custom part (your own board / module)</summary>
+        <p class="hint">Don&rsquo;t see your board listed? Add it by the capabilities it gives you. Type the capability tokens exactly as shown (or copy from a similar board). These flow straight into the engine &mdash; a project needing that capability will now match.</p>
+        <div class="custom-form">
+          <input id="custom-name" type="text" placeholder="Name (e.g. My blue ESP32)" />
+          <input id="custom-caps" type="text" placeholder="caps, comma-separated (e.g. mcu, mcu-wifi, i2c, spi)" />
+          <button id="btn-custom-add" class="btn">Add part</button>
+        </div>
+        <p class="hint muted">Tip: the capability tokens are the short words in <code>taxonomy.js</code> (mcu, mcu-wifi, sensor-temp, display-spi-tft, …). Add several caps to make the board match more projects.</p>
+      </details>
+
       <div id="inventory-groups" class="inventory-groups"></div>
+    </section>
+
+    <!-- ===================== LEARNING PATHS TAB ===================== -->
+    <section id="tab-paths" class="tab-panel">
+      <p class="hint">Curated skill tracks. Each step links to a real project &mdash; done ones are checked off based on what you can build right now.</p>
+      <div id="learning-paths" class="cards"></div>
     </section>
 
     <!-- ===================== PROJECTS TAB ===================== -->
     <section id="tab-projects" class="tab-panel">
+      <div class="toolbar filters" id="project-filters">
+        <span class="filter-label">Difficulty:</span>
+        <label class="chk"><input type="checkbox" class="f-diff" value="Beginner" /> Beginner</label>
+        <label class="chk"><input type="checkbox" class="f-diff" value="Intermediate" /> Intermediate</label>
+        <label class="chk"><input type="checkbox" class="f-diff" value="Advanced" /> Advanced</label>
+        <span class="filter-sep"></span>
+        <span class="filter-label">Topic:</span>
+        <select id="f-topic" class="filter-select">
+          <option value="">All topics</option>
+          <option value="gpio">GPIO</option>
+          <option value="analog">Analog</option>
+          <option value="pwm">PWM</option>
+          <option value="display">Display</option>
+          <option value="sensors">Sensors</option>
+          <option value="wifi">WiFi</option>
+          <option value="ble">Bluetooth</option>
+          <option value="lora">LoRa</option>
+          <option value="motor">Motors</option>
+          <option value="game">Games</option>
+          <option value="audio">Audio</option>
+          <option value="plants">Plants</option>
+          <option value="clock">Clocks</option>
+          <option value="cyd">CYD</option>
+        </select>
+        <button id="f-clear" class="btn ghost small">Clear filters</button>
+      </div>
       <div id="projects-summary" class="projects-summary"></div>
       <h2 class="section-title">✅ Buildable Now</h2>
       <div id="buildable-list" class="cards"></div>

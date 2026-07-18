@@ -246,6 +246,66 @@
     return scored.slice(0, k).map(x => x.p);
   }
 
+  /**
+   * PURE FILTER (Phase 2A) — applied to already-matched results for DISPLAY.
+   * @param {Array} list  results (buildable or near) to filter
+   * @param {{difficulties?:string[], tags?:string[]}} opts
+   *   difficulties: keep only projects whose difficulty is in this set.
+   *   tags:        keep only projects sharing >=1 of these tags.
+   * @returns {Array} filtered (same element objects, order preserved)
+   */
+  function filterProjects(list, opts) {
+    opts = opts || {};
+    const diff = opts.difficulties || [];
+    const tags = opts.tags || [];
+    return list.filter(r => {
+      const p = r.project;
+      if (diff.length && !diff.includes(p.difficulty)) return false;
+      if (tags.length && !(p.tags || []).some(t => tags.includes(t))) return false;
+      return true;
+    });
+  }
+
+  /**
+   * LEARNING PATHS (Phase 2D) — a small teaching layer over the catalog.
+   * Each path is a curated ordered sequence of project ids that build a skill
+   * from zero. We resolve ids -> results so the card shows "buildable" status.
+   * @param {Array} buildableIds  ids currently buildable (so we can mark done)
+   * @returns {Array<{id,title,desc,steps:[{id,title,status}]}>}
+   */
+  function learningPaths(buildableIds) {
+    const have = new Set(buildableIds || []);
+    const byId = {};
+    PROJECT_CATALOG.forEach(p => { byId[p.id] = p; });
+    const PATHS = [
+      { id: 'gpio', title: 'Blink to Buttons (GPIO basics)',
+        desc: 'Learn that an MCU pin can be an output (LED) or an input (button), then combine them.',
+        steps: ['blink_button', 'doorbell', 'motion_light'] },
+      { id: 'analog', title: 'Analog In → Out',
+        desc: 'Read a knob or sensor, then drive an output. The basis of every control project.',
+        steps: ['pot_read', 'pwm_dimmer', 'nightlight', 'plant_monitor'] },
+      { id: 'display', title: 'Tiny Screens',
+        desc: 'Go from printing text to building a real UI on an OLED, then a color TFT / CYD.',
+        steps: ['oled_hello', 'rotary_menu', 'tft_dashboard'] },
+      { id: 'sensors', title: 'Sense the World',
+        desc: 'Wire up sensors and turn raw numbers into something useful.',
+        steps: ['weather_station', 'distance_ranger', 'gas_alarm'] },
+      { id: 'wireless', title: 'Untether It',
+        desc: 'Add WiFi, Bluetooth, or long-range radio so your gadget talks to the world.',
+        steps: ['wifi_clock', 'ble_temp', 'lora_messenger'] },
+      { id: 'motion', title: 'Make It Move',
+        desc: 'Drive servos, steppers, and DC motors — the leap from "blink" to "robot".',
+        steps: ['servo_sweep', 'stepper_controller', 'dc_motor_pwm'] },
+    ];
+    return PATHS.map(path => ({
+      id: path.id, title: path.title, desc: path.desc,
+      steps: path.steps
+        .map(id => byId[id])
+        .filter(Boolean)
+        .map(p => ({ id: p.id, title: p.title, status: have.has(p.id) ? 'done' : 'todo' })),
+    }));
+  }
+
   return {
     analyze,
     matchProject,
@@ -253,6 +313,8 @@
     computeCapQty,
     buildShoppingList,
     moreLike,
+    filterProjects,
+    learningPaths,
     PARTS,
     PROJECT_CATALOG,
   };
