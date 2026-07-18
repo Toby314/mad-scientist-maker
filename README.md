@@ -13,17 +13,27 @@ No build step. No framework. No backend. No accounts. Just open it.
 1. **Inventory** — tick the parts you own from a grouped checklist
    (microcontrollers, sensors, displays, power, I/O, passives, audio, motors,
    radio, misc). Wiring basics (breadboard, jumper wires, USB cable, hookup wire)
-   are assumed — you don't tick those.
+   are assumed — you don't tick those. Add your own parts with the
+   **guided custom-part creator** (no token memorizing — see below).
 2. **Projects** — the app matches your parts against a curated catalog and shows:
    - **✅ Buildable Now** — projects you can build right now, ranked by fit, each
      with a *what you'll learn* blurb, the exact parts it uses from *your*
      inventory, a high-level wiring outline, and a "level-up" note.
    - **🔬 Could've Been** — 2–4 near-misses you're only **1–2 parts away** from,
      with the exact missing part(s) named in a red box.
+   - **🟡 CYD focus** — turn on *Optimize for CYD* (⚙️ Settings, **on by default**)
+     and screen-based builds (the Cheap Yellow Display / ESP32 + TFT) are ranked
+     first and stamped with a 🟡 CYD badge, with a live panel of your ready
+     screen-builds.
 3. **🛒 Shopping List** — every missing part from the near-misses, deduplicated
    and sorted by **how many extra projects it unlocks** (buy the top one first
    for the best leverage). Copy or export it.
-4. **⚙️ Settings** — light/dark theme, optional AI suggestions, and data export.
+4. **Project detail** — tap any buildable/near-miss card to open a page with a
+   **full, copy-paste Arduino/C++ sketch** (ESP32-S3 targeted) + a Copy button,
+   plus the wiring outline and parts used. 33 curated projects ship with a
+   verified sketch.
+5. **⚙️ Settings** — light/dark theme, **Optimize for CYD** toggle, optional AI
+   suggestions, and data export.
 
 ---
 
@@ -76,6 +86,25 @@ Open `js/taxonomy.js`. Each part is one line in the `PARTS` array:
 - `caps` — capability tokens (see the CAPABILITY list below). If your part
   provides a brand-new capability, also add a friendly line to
   `CAPABILITY_CANONICAL` so gap/shopping text reads well.
+
+---
+
+## Project status (phased build)
+
+This app is built in spec-first phases. Current milestone:
+
+| Phase | What it adds | Status |
+|-------|--------------|--------|
+| 1 — Core recommender | Inventory, catalog matching, buildable/near-miss, shopping list, learning paths | ✅ done |
+| 2 — UI refinements | WHY/teaching blocks, difficulty + topic filters, guided detail, custom-part creator (token-free) | ✅ done |
+| 3A — Sketch library | 33 Arduino/C++ sketches, **all compile-verified on ESP32-S3**, wired into detail view with Copy button | ✅ done |
+| 3B — Custom parts | Guided capability checklist + preset (no token memorizing) | ✅ done |
+| 3D — CYD first-class | "Optimize for CYD" toggle, re-rank screen builds, 🟡 badge, focus panel | ✅ done |
+| 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ⏳ next |
+| — — Insurance one-pagers | Static FB promo graphics for Kotraba Insurance Agency | ⏳ pending |
+
+**Phase 3 (current release) ships:** 67 parts, 33 catalog projects, 33 verified
+ESP32-S3 sketches, custom-part creator, and CYD-first recommendations.
 
 ---
 
@@ -188,12 +217,16 @@ mad-scientist-maker/
 - Graceful degradation: the AI layer is fully optional, so the core never
   depends on a network or a key.
 
-**Ideas for v2 (where to extend next):**
-- **Project detail pages** with full, copy-paste code + library install steps.
-- **Quantity counts** in inventory (e.g. "2× LEDs, 3× servos") so multi-instance
-  projects can match.
-- **"More like this"** per card (the AI `morelike:` mode is already wired).
-- **Custom parts editor** in the UI (today you hand-edit `taxonomy.js`).
-- **Difficulty/interest filters** and a "surprise me (curated)" picker.
-- **Share a project** to the catalog via a JSON snippet import.
-- **Tag-based "what should I learn next?"** path through the catalog.
+**Ideas shipped in later phases (were v2 ideas):**
+- ✅ **Project detail pages** with full, copy-paste code + library install steps (Phase 3A).
+- ✅ **Quantity counts** in inventory (e.g. "2× LEDs, 3× servos") so multi-instance
+  projects can match (v2 quantity map).
+- ✅ **"More like this"** per card (the AI `morelike:` mode is already wired).
+- ✅ **Custom parts editor** in the UI (Phase 3B — guided checklist, no hand-editing).
+- ✅ **Difficulty/interest filters** and a topic picker (Phase 2A).
+- ✅ **Tag-based "what should I learn next?"** path through the catalog (Learning Paths tab).
+- ✅ **CYD first-class mode** — ranked screen builds + 🟡 badge (Phase 3D).
+
+**Next up (Phase 4):** iPhone/PWA polish — install prompt, larger touch targets,
+and a proven offline-cache round-trip; plus static FB promo one-pagers for
+Kotraba Insurance Agency.
