@@ -45,7 +45,7 @@ const loadScript = (rel) => {
 };
 
 // Load in the SAME order index.html uses.
-['js/taxonomy.js', 'js/catalog.js', 'js/engine.js', 'js/inventory.js', 'js/ai.js', 'js/ui.js', 'js/detail.js', 'js/app.js']
+['js/taxonomy.js', 'js/catalog.js', 'js/engine.js', 'js/inventory.js', 'js/ai.js', 'js/sketches-data.js', 'js/ui.js', 'js/detail.js', 'js/app.js']
   .forEach(loadScript);
 
 // jsdom keeps readyState as 'loading', so app.js attached a 'load' listener for
@@ -218,6 +218,20 @@ const doneTags = sensorsPath ? sensorsPath.querySelectorAll('.path-tag.done').le
 console.log('   "done" steps in Sense the World path =', doneTags);
 assert(doneTags >= 1, 'Sense the World path marks at least one buildable step done (weather_station)');
 assert(sensorsPath.querySelector('.path-link').getAttribute('href').startsWith('#/project/'), 'learning path steps link to project detail');
+
+console.log('\n=== TEST 14 (3A): project detail renders verified Arduino sketch + Copy button ===');
+// Navigate to a project that has a sketch (blink_button has one).
+window.location.hash = '#/project/blink_button';
+window.dispatchEvent(new window.Event('hashchange'));
+const detailPanel = doc.getElementById('tab-detail');
+const sketchBlock = detailPanel.querySelector('.sketch .code-block');
+const copyBtn = detailPanel.querySelector('.sketch .copy-btn');
+assert(sketchBlock, 'detail view renders a .code-block for the Arduino sketch');
+assert(copyBtn, 'detail view renders a Copy button for the sketch');
+const codeText = sketchBlock ? sketchBlock.textContent : '';
+assert(/void setup|void loop/.test(codeText), 'rendered sketch contains real Arduino setup()/loop() code');
+assert(/ledcAttach|digitalWrite|pinMode/.test(codeText), 'rendered sketch uses expected ESP32 APIs');
+assert(!detailPanel.querySelector('.sketch p.hint'), 'placeholder "not loaded" does NOT appear when data present');
 
 console.log('\n=== DONE ===');
 // TEST 12 (2C) async import round-trip — run before printing final verdict.

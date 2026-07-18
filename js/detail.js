@@ -80,6 +80,42 @@
     return wrap;
   }
 
+  // ---- Phase 3A: verified Arduino/C++ sketch block ----
+  function renderCode(p) {
+    const wrap = el('div', 'sketch');
+    wrap.appendChild(el('h3', null, '🔧 Arduino sketch (copy-paste)'));
+    const sd = root.SKETCHES_DATA || {};
+    const entry = sd[p.id];
+    if (!entry) {
+      wrap.appendChild(el('p', 'hint', 'Sketch source not loaded yet.'));
+      return wrap;
+    }
+    const src = entry.source || '';
+    const pre = el('pre', 'code-block');
+    pre.appendChild(el('code', null, src));
+    wrap.appendChild(pre);
+
+    const copy = el('button', 'btn ghost copy-btn', '📋 Copy sketch');
+    copy.addEventListener('click', () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(src).then(
+          () => { copy.textContent = '✅ Copied!'; setTimeout(() => (copy.textContent = '📋 Copy sketch'), 1500); },
+          () => { copy.textContent = '⚠️ Copy failed'; }
+        );
+      } else {
+        // Fallback for non-secure contexts (file://).
+        const ta = document.createElement('textarea');
+        ta.value = src; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); copy.textContent = '✅ Copied!'; }
+        catch (e) { copy.textContent = '⚠️ Copy failed'; }
+        document.body.removeChild(ta);
+        setTimeout(() => (copy.textContent = '📋 Copy sketch'), 1500);
+      }
+    });
+    wrap.appendChild(copy);
+    return wrap;
+  }
+
   // Render a project into the detail panel and show it.
   function show(projectId) {
     const p = E.PROJECT_CATALOG.find(x => x.id === projectId);
@@ -120,7 +156,11 @@
 
       panel.appendChild(renderWiring(p));
 
+      // ---- Phase 3A: verified Arduino sketch (copy-paste) ----
+      panel.appendChild(renderCode(p));
+
       if (p.guideUrl) {
+
         const guide = el('a', 'btn guide-link', '🔗 Full assembly guide');
         guide.href = p.guideUrl;
         guide.target = '_blank';
@@ -141,7 +181,7 @@
     // detail — it's a destination reached by card click / hash, not a tab).
     document.querySelectorAll('.tab-panel').forEach(pn =>
       pn.classList.toggle('active', pn.id === 'tab-detail'));
-    if (window.scrollTo) window.scrollTo(0, 0);
+    try { if (window.scrollTo) window.scrollTo(0, 0); } catch (_) { /* jsdom has no scrollTo */ }
   }
 
   // Wire card click + hash navigation.
