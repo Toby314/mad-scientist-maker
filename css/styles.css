@@ -246,6 +246,19 @@ main { max-width: 1100px; margin: 0 auto; padding: 18px; }
 .custom-name .muted { font-size: .82em; }
 .qtybtn.del { margin-left: 4px; color: var(--danger); border-color: rgba(255,93,108,.4); }
 
+/* ---- Phase 3B: guided capability checklist ---- */
+.preset-row { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--text-dim); width: 100%; }
+.preset-row select { flex: 1; background: var(--bg-3); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: .88rem; }
+.caps-grid { width: 100%; display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.cap-group { margin: 0; }
+.cap-group h4 { margin: 6px 0 4px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-2); }
+.cap-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cap-chip { display: inline-flex; align-items: center; gap: 4px; font-size: .8rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px; cursor: pointer; }
+.cap-chip input { accent-color: var(--cyan); }
+.cap-chip:has(input:checked) { border-color: var(--cyan); background: rgba(34,211,238,.12); }
+.caps-preview { width: 100%; font-size: .8rem; color: var(--text-dim); }
+.caps-preview code { color: var(--text); word-break: break-word; }
+
 /* ---- Phase 2D: learning paths ---- */
 #tab-paths .card.path-card { border-left: 4px solid var(--cyan); }
 .path-steps { display: flex; flex-direction: column; gap: 6px; }

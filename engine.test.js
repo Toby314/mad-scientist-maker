@@ -38,6 +38,21 @@ res.shoppingList.forEach(item => {
 assert(res.buildable.length === 6, 'v2 still reports 6 buildable from the sample map');
 assert(res.buildable.some(r => r.project.id === 'weather_station'), 'Mini Weather Station buildable');
 
+// Phase 3B: CAPABILITY_GROUPS must be a complete, non-orphaned view of the
+// capability vocabulary. Every token in a group must have canonical wording, and
+// every canonical token that is "selectable" must appear in some group (so the
+// UI never hides a capability a project could need).
+const T = require('./js/taxonomy.js');
+const grouped = new Set(T.CAPABILITY_GROUPS.flatMap(g => g.caps));
+const canon = Object.keys(T.CAPABILITY_CANONICAL);
+const orphanInGroups = canon.filter(c => !grouped.has(c));
+// ASSUMED_BASICS-style basics aren't capability tokens, so ignore them; all real
+// caps must be reachable. Touch/onewire/rtc are real caps and must be grouped.
+assert(orphanInGroups.length === 0, 'every canonical capability appears in CAPABILITY_GROUPS (no hidden caps): ' + orphanInGroups.join(','));
+const badRefs = T.CAPABILITY_GROUPS.flatMap(g => g.caps).filter(c => !(c in T.CAPABILITY_CANONICAL));
+assert(badRefs.length === 0, 'no CAPABILITY_GROUPS token lacks canonical wording: ' + badRefs.join(','));
+console.log('   capability groups cover', grouped.size, 'tokens across', T.CAPABILITY_GROUPS.length, 'groups');
+
 // v2 THRESHOLD: window is now 1–3 (was 1–2). A project 3 parts short but with
 // at least one required cap present should appear as a near-miss, not be ignored.
 const threeAway = res.couldve.find(r => r.missing.length === 3);

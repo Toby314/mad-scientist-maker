@@ -230,6 +230,12 @@
     'mcu-usb':        'ESP32-S3 (native USB / HID device)',
     'zigbee':         'ESP32-C5 / ESP32-C6 (802.15.4 / Thread / Zigbee radio)',
     'camera':         'ESP32-S3 or ESP32-CAM (OV2640 camera module)',
+    'i2c':            'I2C bus (built into your MCU, or an I2C expander)',
+    'spi':            'SPI bus (built into your MCU)',
+    'pwm':            'PWM / analog-out pins (built into your MCU)',
+    'adc':            'ADC / analog-in pins (built into your MCU)',
+    'touch':          'Capacitive-touch pins (ESP32 / ESP32-S3)',
+    'onewire':        '1-Wire bus (built into your MCU, for DS18B20)',
     'sensor-temp':    'Temp sensor (DHT22, BME280, or DS18B20)',
     'sensor-humidity':'Humidity sensor (DHT22 or BME280)',
     'sensor-pressure':'Pressure sensor (BMP280 or BME280)',
@@ -275,10 +281,36 @@
     'storage-sd':     'microSD module',
   };
 
+  // ---- Capability groups (for the Phase 3B guided custom-part creator) -------
+  // Instead of making a beginner type raw tokens, we show these buckets as
+  // checklists. The GROUP order is what the UI renders; each token must exist
+  // in CAPABILITY_CANONICAL above (engine.test.js asserts that to keep the two
+  // in sync). WHY this grouping: it mirrors how a maker thinks about a board
+  // ("it's a microcontroller", "it has WiFi", "it has a screen") rather than
+  // the flat token vocabulary.
+  const CAPABILITY_GROUPS = [
+    { id: 'mcu', name: 'Microcontroller', caps: ['mcu', 'mcu-wifi', 'mcu-ble', 'mcu-usb', 'camera', 'zigbee'] },
+    { id: 'buses', name: 'Buses / I/O pins', caps: ['i2c', 'spi', 'pwm', 'adc', 'touch', 'onewire'] },
+    { id: 'sensors', name: 'Sensors', caps: [
+      'sensor-temp', 'sensor-humidity', 'sensor-pressure', 'sensor-motion',
+      'sensor-moisture', 'sensor-distance', 'sensor-light', 'sensor-gas',
+      'sensor-imu', 'sensor-current' ] },
+    { id: 'display', name: 'Display / Output', caps: [
+      'display-i2c-oled', 'display-spi-tft', 'display-eink', 'display-ledmatrix',
+      'display-lcd', 'led', 'led-addressable' ] },
+    { id: 'audio', name: 'Audio', caps: ['buzzer', 'speaker', 'mic'] },
+    { id: 'motor', name: 'Motors & Actuators', caps: ['servo', 'stepper', 'dc-motor', 'motor-driver', 'relay'] },
+    { id: 'radio', name: 'Radio / Connectivity', caps: ['lora', 'rfid', 'rf-24ghz', 'rf-433', 'rtc'] },
+    { id: 'power', name: 'Power', caps: [
+      'battery', 'battery-18650', 'lipo', 'charge-tp4056', 'power-boost', 'power-buck' ] },
+    { id: 'io', name: 'Inputs', caps: ['button', 'switch', 'potentiometer', 'rotary-encoder'] },
+    { id: 'storage', name: 'Storage', caps: ['storage-sd', 'capacitor', 'resistor'] },
+  ];
+
   // ---- Wiring "basics" we ASSUME you own (so we never nag about them) --------
   // These don't provide matching capabilities; they're just always-on context.
   // Kept here as documentation + so the UI can mention them.
   const ASSUMED_BASICS = ['breadboard', 'jumper wires', 'USB cable', 'hookup wire'];
 
-  return { CATEGORIES, PARTS, CAPABILITY_CANONICAL, ASSUMED_BASICS };
+  return { CATEGORIES, PARTS, CAPABILITY_CANONICAL, CAPABILITY_GROUPS, ASSUMED_BASICS };
 });

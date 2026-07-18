@@ -84,19 +84,88 @@
     );
   }
 
-  // ---- Phase 2B: add a custom part from the form ----
+  // ---- Phase 3B: guided custom-part creator (checklist, no token memorizing) ----
+  // Build the capability checklist + preset dropdown from taxonomy, once.
+  const capsGrid = document.getElementById('custom-caps-grid');
+  const capCanon = T.CAPABILITY_CANONICAL;
+  function mk(tag, cls, text) {
+    // Local createElement helper so this module has no dependency on ui.js's `el`.
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function buildCapsChecklist() {
+    capsGrid.innerHTML = '';
+    T.CAPABILITY_GROUPS.forEach(group => {
+      const fieldset = mk('div', 'cap-group');
+      fieldset.appendChild(mk('h4', null, group.name));
+      const chips = mk('div', 'cap-chips');
+      group.caps.forEach(cap => {
+        if (!capCanon[cap]) return;              // skip tokens with no friendly name
+        const label = mk('label', 'cap-chip');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = cap;
+        cb.className = 'cap-check';
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + capCanon[cap]));
+        chips.appendChild(label);
+      });
+      fieldset.appendChild(chips);
+      capsGrid.appendChild(fieldset);
+    });
+  }
+  function selectedCaps() {
+    return Array.from(capsGrid.querySelectorAll('.cap-check:checked')).map(cb => cb.value);
+  }
+  function syncCapsPreview() {
+    const caps = selectedCaps();
+    document.getElementById('custom-caps-preview').textContent =
+      caps.length ? caps.join(', ') : '(none ticked)';
+  }
+  capsGrid.addEventListener('change', syncCapsPreview);
+
+  // "Like a board" preset: pre-tick the caps of a known board.
+  const presetEl = document.getElementById('custom-preset');
+  function buildPresetOptions() {
+    T.PARTS.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      presetEl.appendChild(opt);
+    });
+  }
+  presetEl.addEventListener('change', () => {
+    const part = T.PARTS.find(p => p.id === presetEl.value);
+    // clear all first
+    capsGrid.querySelectorAll('.cap-check').forEach(cb => { cb.checked = false; });
+    if (part) {
+      part.caps.forEach(cap => {
+        const cb = capsGrid.querySelector('.cap-check[value="' + cap + '"]');
+        if (cb) cb.checked = true;
+      });
+    }
+    syncCapsPreview();
+  });
+
+  buildCapsChecklist();
+  buildPresetOptions();
+
   function addCustomPart() {
     const nameEl = document.getElementById('custom-name');
-    const capsEl = document.getElementById('custom-caps');
     const name = nameEl.value.trim();
-    const capsRaw = capsEl.value.trim();
     if (!name) { toast('Give the part a name'); nameEl.focus(); return; }
-    const caps = capsRaw.split(',').map(s => s.trim()).filter(Boolean);
-    if (!caps.length) { toast('Add at least one capability token'); capsEl.focus(); return; }
+    const caps = selectedCaps();
+    if (!caps.length) { toast('Tick at least one capability'); return; }
     state.custom = state.custom || [];
     state.custom.push({ name, caps, qty: 1 });
     Inv.save(state);
-    nameEl.value = ''; capsEl.value = '';
+    // reset the form for the next entry
+    nameEl.value = '';
+    capsGrid.querySelectorAll('.cap-check').forEach(cb => { cb.checked = false; });
+    presetEl.value = '';
+    syncCapsPreview();
     renderInventoryNow(); recompute();
     toast('Added "' + name + '" — it now counts toward matching');
   }

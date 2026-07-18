@@ -185,24 +185,34 @@ assert(/^#\/project\//.test(window.location.hash), 'Surprise me routes to a proj
 doc.getElementById('tab-projects').classList.add('active'); // back to projects for remaining tests
 window.location.hash = '';
 
-console.log('\n=== TEST 11 (2B): add a custom part and see it match ===');
-// Add a custom part that supplies display-spi-tft (a CYD-like board).
+console.log('\n=== TEST 11 (3B): guided custom-part creator (checklist) ===');
+// The guided creator builds a checklist from CAPABILITY_GROUPS. Verify the grid
+// rendered and that ticking caps + "like a board" preset works.
+const grid = doc.getElementById('custom-caps-grid');
+const checks = grid.querySelectorAll('.cap-check');
+assert(checks.length > 20, 'capability checklist rendered all selectable caps (' + checks.length + ')');
+// Tick via the "like a board" preset (pick the CYD, which has display-spi-tft).
+const preset = doc.getElementById('custom-preset');
+preset.value = 'cyd';
+preset.dispatchEvent(new window.Event('change', { bubbles: true }));
+const checkedAfterPreset = grid.querySelectorAll('.cap-check:checked').length;
+assert(checkedAfterPreset >= 8, 'selecting "like CYD" pre-ticks its caps (' + checkedAfterPreset + ')');
+const preview = doc.getElementById('custom-caps-preview').textContent;
+assert(/display-spi-tft/.test(preview), 'caps preview shows the ticked display-spi-tft');
+// Now add it.
 doc.getElementById('custom-name').value = 'Mystery Board X';
-doc.getElementById('custom-caps').value = 'mcu, mcu-wifi, display-spi-tft';
 doc.getElementById('btn-custom-add').click();
 const customRow = Array.from(doc.querySelectorAll('#inventory-groups .custom-part')).find(r => /Mystery Board X/.test(r.textContent));
 assert(!!customRow, 'custom part appears in the inventory grid');
-assert(/mcu, mcu-wifi, display-spi-tft/.test(customRow.textContent), 'custom part shows its caps');
-// The TFT Dashboard needs display-spi-tft; before the custom part it was a near-miss.
-// Recompute already ran; confirm it is now buildable (sample had no TFT before).
-// Need sample loaded (it is from TEST 2). Go to projects + check.
+assert(/display-spi-tft/.test(customRow.textContent), 'custom part shows its caps');
+// The TFT Dashboard needs display-spi-tft; after adding the custom board it is buildable.
 const tftBuildable = Array.from(doc.querySelectorAll('#buildable-list .card.buildable h3')).some(n => /TFT Touch Dashboard/.test(n.textContent));
-console.log('   TFT Touch Dashboard buildable after adding custom board =', tftBuildable);
 assert(tftBuildable, 'adding a custom display-spi-tft part makes TFT Dashboard buildable');
-// Remove it again.
+// Remove it again (resets the checklist too).
 const delBtn = customRow.querySelector('.qtybtn.del');
 delBtn.dispatchEvent(new window.Event('click', { bubbles: true }));
 assert(!Array.from(doc.querySelectorAll('#inventory-groups .custom-part')).some(r => /Mystery Board X/.test(r.textContent)), 'custom part removed on × click');
+assert(grid.querySelectorAll('.cap-check:checked').length === 0, 'checklist cleared after add');
 
 console.log('\n=== TEST 12 (2C): import round-trip restores inventory ===');
 console.log('   (async import verified below with the final summary)');
