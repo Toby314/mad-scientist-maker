@@ -106,6 +106,7 @@
         <button id="f-clear" class="btn ghost small">Clear filters</button>
       </div>
       <div id="projects-summary" class="projects-summary"></div>
+      <div id="cyd-panel" class="cyd-panel"></div>
       <h2 class="section-title">✅ Buildable Now</h2>
       <div id="buildable-list" class="cards"></div>
       <h2 class="section-title">🔬 Could&rsquo;ve Been <span class="muted">(1&ndash;3 parts away)</span></h2>
@@ -128,6 +129,10 @@
       <label class="row-toggle">
         <input type="checkbox" id="chk-light" /> Use light theme
       </label>
+      <label class="row-toggle">
+        <input type="checkbox" id="chk-cyd" /> Optimize for CYD (Cheap Yellow Display)
+      </label>
+      <p class="hint">The CYD (ESP32 + built-in TFT touchscreen) is this app&rsquo;s target hardware. With this on, screen-based builds are ranked first and stamped with a 🟡 CYD badge. On by default.</p>
 
       <h2 class="section-title">Optional AI Suggestions</h2>
       <p class="hint">Fully optional. The curated catalog always works offline with no key. Add an OpenAI-compatible endpoint + key (stored only in this browser) to unlock &ldquo;Surprise me&rdquo; idea generation. Your key never leaves your device except to call the endpoint you specify.</p>

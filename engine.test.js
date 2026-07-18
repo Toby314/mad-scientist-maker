@@ -79,4 +79,21 @@ console.log('   moreLike(weather_station) ->', siblings.map(s => s.title).join('
 
 console.log('\nTotal catalog projects:', Engine.PROJECT_CATALOG.length);
 console.log('Total parts in taxonomy:', Engine.PARTS.length);
+
+// Phase 3D: CYD ranking. Build an inventory that yields at least one screen
+// build AND at least one non-screen build, then confirm sortByCyd floats the
+// screen build to the top. We use the CYD part (provides display-spi-tft) plus
+// a couple modules so multiple projects are buildable.
+const cydRes = Engine.analyze({ cyd: 1, dht22: 1, pir: 1, led: 3, buzzer: 1 });
+assert(cydRes.buildable.length >= 2, 'CYD inventory yields multiple buildable (' + cydRes.buildable.length + ')');
+const ranked = Engine.sortByCyd(cydRes.buildable);
+const topIsScreen = (ranked[0].project.requiredCaps || []).indexOf('display-spi-tft') !== -1;
+assert(topIsScreen, 'sortByCyd floats a TFT/screen build to the top');
+// The CYD relevance score is deterministic and higher for screen builds.
+const tftProj = Engine.PROJECT_CATALOG.find(p => p.id === 'tft_dash') || cydRes.buildable.find(r => (r.project.requiredCaps||[]).indexOf('display-spi-tft') !== -1);
+if (tftProj) {
+  const tftScore = Engine.cydScore(tftProj.project || tftProj);
+  assert(tftScore >= 3, 'cydScore of a TFT build is >= 3 (weighted by screen use): ' + tftScore);
+  console.log('   cydScore(TFT build) =', tftScore, '| top build =', ranked[0].project.title);
+}
 console.log(process.exitCode ? '\nSOME ENGINE TESTS FAILED' : '\nALL ENGINE TESTS PASSED');

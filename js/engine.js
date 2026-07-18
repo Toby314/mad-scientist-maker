@@ -20,14 +20,15 @@
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     // In Node we load the data files ourselves.
-    const { PARTS, CAPABILITY_CANONICAL } = require('./taxonomy.js');
+    const T = require('./taxonomy.js');
     const { PROJECT_CATALOG } = require('./catalog.js');
-    module.exports = factory(PARTS, CAPABILITY_CANONICAL, PROJECT_CATALOG);
+    module.exports = factory(T.PARTS, T.CAPABILITY_CANONICAL, PROJECT_CATALOG, T.CYD_RELEVANT_CAPS, T.CYD_CAP_WEIGHT);
   } else {
     // In the browser the data globals already exist (loaded before this file).
-    root.Engine = factory(root.TAXONOMY.PARTS, root.TAXONOMY.CAPABILITY_CANONICAL, root.CATALOG.PROJECT_CATALOG);
+    root.Engine = factory(root.TAXONOMY.PARTS, root.TAXONOMY.CAPABILITY_CANONICAL, root.CATALOG.PROJECT_CATALOG,
+                          root.TAXONOMY.CYD_RELEVANT_CAPS, root.TAXONOMY.CYD_CAP_WEIGHT);
   }
-})(typeof self !== 'undefined' ? self : this, function (PARTS, CAPABILITY_CANONICAL, PROJECT_CATALOG) {
+})(typeof self !== 'undefined' ? self : this, function (PARTS, CAPABILITY_CANONICAL, PROJECT_CATALOG, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT) {
 
   // ---------- small helpers ---------------------------------------------------
   const DIFF_PENALTY = { Beginner: 0, Intermediate: 1, Advanced: 2 };
@@ -306,6 +307,32 @@
     }));
   }
 
+  /**
+   * PHASE 3D — CYD (Cheap Yellow Display) relevance score.
+   * Pure function over a project's required+optional caps. Used to re-rank
+   * buildable projects when "Optimize for CYD" is on, so screen-based ESP32
+   * builds (the CYD's whole reason to exist) float to the top.
+   * Higher = more CYD-shaped. Caps not in CYD_RELEVANT_CAPS contribute 0.
+   */
+  function cydScore(project) {
+    const caps = (project.requiredCaps || []).concat(project.optionalCaps || []);
+    let score = 0;
+    caps.forEach(c => {
+      if (CYD_RELEVANT_CAPS.indexOf(c) === -1) return;
+      score += (CYD_CAP_WEIGHT[c] || 1);
+    });
+    return score;
+  }
+
+  // Re-rank a buildable list by CYD relevance (desc), keeping the engine's
+  // fitness order as the tiebreaker so non-CYD projects still sort sensibly.
+  function sortByCyd(buildable) {
+    return buildable.slice().sort((a, b) =>
+      (cydScore(b.project) - cydScore(a.project)) ||
+      (b.score - a.score) ||
+      (DIFF_PENALTY[a.project.difficulty] - DIFF_PENALTY[b.project.difficulty]));
+  }
+
   return {
     analyze,
     matchProject,
@@ -315,6 +342,8 @@
     moreLike,
     filterProjects,
     learningPaths,
+    cydScore,
+    sortByCyd,
     PARTS,
     PROJECT_CATALOG,
   };

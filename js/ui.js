@@ -107,7 +107,7 @@
   }
 
   // ---------------- ONE PROJECT CARD ----------------
-  function projectCard(r, kind) {
+  function projectCard(r, kind, cydMode) {
     const p = r.project;
     const card = el('div', 'card ' + kind);
     card.setAttribute('data-project-id', p.id); // clickable -> detail view
@@ -119,6 +119,10 @@
     const meta = el('div', 'meta');
     meta.appendChild(el('span', 'badge ' + p.difficulty, p.difficulty));
     meta.appendChild(el('span', 'badge', p.buildTime));
+    // Phase 3D: stamp a "🟡 CYD" badge on buildable screen-builds (uses the TFT).
+    if (cydMode && kind === 'buildable' && (p.requiredCaps || []).indexOf(T.CYD_DISPLAY_CAP) !== -1) {
+      meta.appendChild(el('span', 'badge cyd', '🟡 CYD'));
+    }
     card.appendChild(meta);
 
     // WHY (the teaching layer)
@@ -192,7 +196,7 @@
   // 1–3 gap window can surface many). Extra ones are revealed by "Show more".
   // filter = { difficulties:[], tags:[] } from Phase 2A; applied for DISPLAY only
   // (the engine still ranks the full set, so counts stay honest).
-  function renderProjects(result, buildableList, nearList, summaryEl, maxNear, filter) {
+  function renderProjects(result, buildableList, nearList, summaryEl, maxNear, filter, cydMode) {
     if (maxNear == null) maxNear = 4;
     if (filter == null) filter = {};
     buildableList.innerHTML = '';
@@ -207,9 +211,11 @@
     const nNear = allNear.length;
     const fb = filter.difficulties && filter.difficulties.length;
     const ft = filter.tags && filter.tags.length;
+    const cydNote = cydMode ? ' &nbsp;·&nbsp; 🟡 ranking for <b>CYD</b>' : '';
     summaryEl.innerHTML =
       `<span class="muted">✅ ${nBuild} buildable &nbsp;·&nbsp; 🔬 ${nNear} near-miss${nNear === 1 ? '' : 'es'}` +
       (fb || ft ? ` &nbsp;·&nbsp; <b>filtered</b> showing ${shownBuild.length} / ${nBuild} buildable` : '') +
+      cydNote +
       `</span>`;
 
     if (nBuild === 0) {
@@ -219,7 +225,7 @@
       buildableList.appendChild(el('div', 'empty',
         'No buildable projects match this filter. Widen it or tick more parts.'));
     } else {
-      shownBuild.forEach(r => buildableList.appendChild(projectCard(r, 'buildable')));
+      shownBuild.forEach(r => buildableList.appendChild(projectCard(r, 'buildable', cydMode)));
     }
 
     if (nNear === 0) {
@@ -287,7 +293,49 @@
     });
   }
 
+  // ---------------- CYD PANEL (Phase 3D) ----------------
+  // A compact sidebar panel on the Projects tab. When cydMode is on it shows
+  // (a) which screen-capable parts you own, and (b) how many buildable projects
+  // are CYD-shaped (use the TFT) — so the user sees the CYD focus paying off.
+  function renderCydPanel(panelEl, result, cydMode) {
+    if (!panelEl) return;
+    panelEl.innerHTML = '';
+    if (!cydMode) {
+      panelEl.appendChild(el('div', 'cyd-off muted', 'CYD mode off. Turn on "Optimize for CYD" in ⚙️ Settings to rank screen-builds first.'));
+      return;
+    }
+    const cydCap = T.CYD_DISPLAY_CAP;
+    const haveDisp = (result.inventoryCaps || []).indexOf(cydCap) !== -1;
+    const cydBuilds = result.buildable.filter(r => (r.project.requiredCaps || []).indexOf(cydCap) !== -1);
+
+    const head = el('div', 'cyd-head');
+    head.appendChild(el('h3', null, '🟡 CYD focus'));
+    panelEl.appendChild(head);
+
+    const owns = el('p', 'cyd-owns');
+    owns.innerHTML = haveDisp
+      ? 'You own a <b>TFT display</b> (CYD or screen module) — ' + cydBuilds.length + ' screen build' + (cydBuilds.length === 1 ? '' : 's') + ' ready.'
+      : 'No TFT display owned yet. Tick the <b>CYD</b> (ESP32 + TFT touch) in 🧪 Inventory to unlock screen builds.';
+    panelEl.appendChild(owns);
+
+    if (cydBuilds.length) {
+      const list = el('ul', 'cyd-builds');
+      cydBuilds.forEach(r => {
+        const li = document.createElement('li');
+        const a = el('a', 'cyd-link');
+        a.textContent = r.project.title;
+        a.setAttribute('data-project-id', r.project.id);
+        a.href = '#project=' + r.project.id;
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+      panelEl.appendChild(list);
+    } else {
+      panelEl.appendChild(el('p', 'muted', 'Add a screen (or the CYD) to see builds here.'));
+    }
+  }
+
   root.UI = {
-    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, escapeHtml,
+    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, renderCydPanel, escapeHtml,
   };
 })(window);

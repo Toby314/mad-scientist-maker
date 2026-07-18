@@ -243,6 +243,38 @@ assert(/void setup|void loop/.test(codeText), 'rendered sketch contains real Ard
 assert(/ledcAttach|digitalWrite|pinMode/.test(codeText), 'rendered sketch uses expected ESP32 APIs');
 assert(!detailPanel.querySelector('.sketch p.hint'), 'placeholder "not loaded" does NOT appear when data present');
 
+console.log('\n=== TEST 15 (3D): CYD mode ranks screen builds first + stamps badge ===');
+// Ensure a screen build is possible: tick the CYD part in the inventory.
+doc.querySelector('.tab[data-tab="inventory"]').click();
+const cydRow = Array.from(doc.querySelectorAll('#inventory-groups .part')).find(r => /CYD/.test(r.textContent));
+assert(!!cydRow, 'CYD part is listed in inventory');
+const cydCb = cydRow.querySelector('input[type="checkbox"]');
+if (!cydCb.checked) cydCb.click(); // triggers recompute via onSetQty
+// Go to Projects and read the buildable order + badges.
+doc.querySelector('.tab[data-tab="projects"]').click();
+const buildTitles = Array.from(doc.querySelectorAll('#buildable-list .card.buildable h3')).map(n => n.textContent);
+console.log('   first 3 buildable (CYD mode on):', buildTitles.slice(0, 3).join(' | '));
+const topHasScreen = /TFT|Display|Clock|Screen/i.test(buildTitles[0] || '');
+assert(topHasScreen, 'with CYD mode on, a screen/TFT build is at or near the top');
+const cydBadges = doc.querySelectorAll('#buildable-list .card.buildable .badge.cyd').length;
+assert(cydBadges >= 1, 'at least one buildable card carries a 🟡 CYD badge: ' + cydBadges);
+const panel = doc.getElementById('cyd-panel');
+assert(panel && /CYD focus/.test(panel.textContent), 'CYD panel renders with focus header');
+assert(panel && /screen build/.test(panel.textContent), 'CYD panel reports screen-build count');
+// Toggle CYD mode OFF via the settings checkbox and confirm ranking changes.
+doc.querySelector('.tab[data-tab="settings"]').click();
+const cydChk = doc.getElementById('chk-cyd');
+assert(!!cydChk && cydChk.checked, 'CYD toggle is checked by default (default-on)');
+cydChk.click(); // turns off -> recompute
+doc.querySelector('.tab[data-tab="projects"]').click();
+const buildTitlesOff = Array.from(doc.querySelectorAll('#buildable-list .card.buildable h3')).map(n => n.textContent);
+assert(buildTitles.join('|') !== buildTitlesOff.join('|'), 'turning CYD mode off re-ranks buildable list');
+const badgesOff = doc.querySelectorAll('#buildable-list .card.buildable .badge.cyd').length;
+assert(badgesOff === 0, 'no CYD badges shown when mode is off');
+// Turn back on for a clean shared state.
+doc.querySelector('.tab[data-tab="settings"]').click();
+doc.getElementById('chk-cyd').click();
+
 console.log('\n=== DONE ===');
 // TEST 12 (2C) async import round-trip — run before printing final verdict.
 // Reload the sample so the exported state is deterministic, then re-import it.

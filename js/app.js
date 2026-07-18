@@ -17,6 +17,9 @@
   // ---- STATE (in memory mirror of what's in localStorage) ----
   // v2: state.owned is a QUANTITY MAP { partId: qty } (was v1 ownedIds array).
   let state = Inv.load();   // { version, owned, custom }
+  // Phase 3D: "Optimize for CYD" toggle. Default ON — the CYD is the stated
+  // target hardware, so a first-time user gets screen-builds-first immediately.
+  if (typeof state.cydMode !== 'boolean') state.cydMode = true;
 
   // ---- DOM refs ----
   const $ = sel => document.querySelector(sel);
@@ -43,9 +46,16 @@
     // v2: analyze() takes the owned qty map directly.
     lastResult = E.analyze(state.owned, state.custom);
     filter = currentFilter();
-    UI.renderProjects(lastResult, buildableEl, nearEl, summaryEl, 4, filter);
+    // Phase 3D: when "Optimize for CYD" is on, re-rank the BUILDABLE list by
+    // CYD relevance (screen-builds first) before handing it to the renderer.
+    // The engine's fitness order is the tiebreaker inside sortByCyd.
+    const buildable = state.cydMode ? E.sortByCyd(lastResult.buildable) : lastResult.buildable;
+    // Pass cydMode so the renderer can stamp a "🟡 CYD" badge on screen builds.
+    UI.renderProjects({ buildable: buildable, couldve: lastResult.couldve, shoppingList: lastResult.shoppingList },
+                      buildableEl, nearEl, summaryEl, 4, filter, state.cydMode);
     UI.renderShopping(shoppingEl, lastResult.shoppingList);
     UI.renderLearningPaths(document.getElementById('learning-paths'), E.learningPaths(lastResult.buildable.map(r => r.project.id)));
+    UI.renderCydPanel(document.getElementById('cyd-panel'), lastResult, state.cydMode);
     const total = Object.values(state.owned).reduce((a, q) => a + q, 0);
     ownedCount.textContent = total + ' part' + (total === 1 ? '' : 's') + ' owned';
   }
@@ -254,6 +264,18 @@
     if (e.target.checked) { document.documentElement.dataset.theme = 'light'; localStorage.setItem('msm.theme', 'light'); }
     else { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('msm.theme', 'dark'); }
   });
+
+  // Phase 3D: "Optimize for CYD" toggle. Persisted on state so it survives reload.
+  const cydChk = $('#chk-cyd');
+  if (cydChk) {
+    cydChk.checked = state.cydMode;
+    cydChk.addEventListener('change', e => {
+      state.cydMode = e.target.checked;
+      Inv.save(state);
+      recompute();
+      toast(state.cydMode ? 'Optimizing for CYD — screen builds first' : 'CYD mode off — standard ranking');
+    });
+  }
 
   // AI settings
   const aiSettings = AI.loadSettings();

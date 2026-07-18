@@ -314,3 +314,14 @@ main { max-width: 1100px; margin: 0 auto; padding: 18px; }
 .morelike-list { margin: 6px 0; padding-left: 18px; }
 .morelike-link { color: var(--cyan); cursor: pointer; }
 .morelike-link:hover { text-decoration: underline; }
+
+/* ---- Phase 3D: CYD focus badge + panel ---- */
+.badge.cyd { background: rgba(234,179,8,.16); color: #f5c518; border: 1px solid rgba(234,179,8,.5); font-weight: 600; }
+.cyd-panel { background: var(--bg-2); border: 1px solid rgba(234,179,8,.35); border-radius: var(--radius); padding: 12px 16px; margin: 12px 0; }
+.cyd-panel .cyd-head h3 { margin: 0 0 6px; font-size: .95rem; color: #f5c518; }
+.cyd-panel .cyd-owns { margin: 0 0 8px; font-size: .88rem; }
+.cyd-panel .cyd-builds { margin: 0; padding-left: 18px; }
+.cyd-panel .cyd-builds li { margin: 2px 0; }
+.cyd-panel .cyd-link { color: var(--cyan); text-decoration: none; }
+.cyd-panel .cyd-link:hover { text-decoration: underline; }
+.cyd-panel .cyd-off { font-size: .85rem; }

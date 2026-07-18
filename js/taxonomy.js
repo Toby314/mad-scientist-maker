@@ -312,5 +312,27 @@
   // Kept here as documentation + so the UI can mention them.
   const ASSUMED_BASICS = ['breadboard', 'jumper wires', 'USB cable', 'hookup wire'];
 
-  return { CATEGORIES, PARTS, CAPABILITY_CANONICAL, CAPABILITY_GROUPS, ASSUMED_BASICS };
+  // ---- Phase 3D: CYD (Cheap Yellow Display) first-class mode ----------------
+  // The CYD is Toby's stated target hardware: an ESP32 with a built-in TFT
+  // touchscreen. When "Optimize for CYD" is on, we re-rank buildable projects so
+  // screen-based builds float to the top, and we flag which projects are a
+  // natural fit. These two constants are the single source of that ranking.
+  const CYD_DISPLAY_CAP = 'display-spi-tft';   // the cap the CYD uniquely adds
+  // Caps that make a project "CYD-shaped" (screen-centric, ESP32-friendly).
+  // Ordered by weight: actually using the screen matters most; then touch; then
+  // the common ESP32 buses the CYD exposes.
+  const CYD_RELEVANT_CAPS = [
+    'display-spi-tft',   // 3 pts — the whole point of a CYD
+    'display-eink',      // 2 pts — also a screen build
+    'display-ledmatrix', // 1 pt  — visual output
+    'touch',             // 2 pts — the CYD's touch layer
+    'mcu',               // 1 pt  — runs on the CYD's ESP32
+    'mcu-wifi',          // 1 pt  — CYD is WiFi by default
+    'i2c', 'spi', 'pwm', 'adc', // 1 pt each — buses the CYD breaks out
+  ];
+  // Weight map for the CYD relevance score (defaults to 1 if not listed above).
+  const CYD_CAP_WEIGHT = { 'display-spi-tft': 3, 'display-eink': 2, 'touch': 2, 'display-ledmatrix': 1 };
+
+  return { CATEGORIES, PARTS, CAPABILITY_CANONICAL, CAPABILITY_GROUPS, ASSUMED_BASICS,
+           CYD_DISPLAY_CAP, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT };
 });
