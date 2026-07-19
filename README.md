@@ -103,8 +103,9 @@ This app is built in spec-first phases. Current milestone:
 | 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ✅ done (v4.0.0) |
 | 5 — Gap-closing | "Why it fits" reasoning + teach-me, fuzzy/semantic search, datasheet→catalog import + graph, PCB/BOM assist, desktop/MCP packaging | 📋 planned |
 
-**Phase 3 (current release) ships:** 67 parts, 33 catalog projects, 33 verified
-ESP32-S3 sketches, custom-part creator, and CYD-first recommendations.
+**Phase 4 (current release, v4.0.0) ships:** 67 parts, 33 catalog projects, 33 verified
+ESP32-S3 sketches, custom-part creator, CYD-first recommendations, and iPhone/PWA polish
+(install prompt, 44px touch targets, responsive ≤480px, proven offline cache).
 
 ---
 
