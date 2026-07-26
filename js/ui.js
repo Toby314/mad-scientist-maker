@@ -408,7 +408,25 @@
     }
   }
 
+  // ---------------- "WHAT TO BUILD NEXT" (Phase 5 v5.1.0) ----------------
+  // Shows a single recommended next project at the top of the Projects tab,
+  // using Engine.buildNext() — picks a buildable project that builds a NEW skill.
+  function renderBuildNext(container, suggestion) {
+    container.innerHTML = '';
+    if (!suggestion) {
+      container.appendChild(el('p', 'hint', 'Tick the parts you own in 🧪 Inventory to get a personalized "build next" suggestion.'));
+      return;
+    }
+    const card = el('div', 'card next-card');
+    card.appendChild(el('h3', null, '➡️ Build this next'));
+    const title = el('a', 'next-title', escapeHtml(suggestion.title));
+    title.href = '#/project/' + suggestion.id;
+    card.appendChild(title);
+    card.appendChild(el('p', 'next-reason', escapeHtml(suggestion.reason)));
+    container.appendChild(card);
+  }
+
   root.UI = {
-    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, renderCydPanel, renderSearchResults, escapeHtml,
+    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, renderCydPanel, renderSearchResults, renderBuildNext, escapeHtml,
   };
 })(window);

@@ -571,6 +571,85 @@
 
   function setInventory(qtyMap) { InventoryQty = qtyMap || {}; }
 
+  /**
+   * PHASE 5 (v5.1.0) — PART SUBSTITUTION ENGINE (Toby's own idea).
+   * The #1 maker frustration: "I don't have a DHT22." This answers it by
+   * listing, for every REQUIRED capability of a project, every catalog part
+   * that can satisfy it — and which of those the user already OWNS. So the
+   * recommendation becomes "you can use a BME280 instead of a DHT22; you own it."
+   * Pure + Node-testable. Reads PARTS, never mutates state.
+   * @param {string} projectId
+   * @param {string[]} [ownedIds] parts the user owns
+   * @returns {Array<{cap, label, options:Array<{id,name,owned}>, ownedCount}>}
+   *   one entry per required capability; options sorted owned-first.
+   */
+  function substitutions(projectId, ownedIds) {
+    const p = PROJECT_CATALOG.find(x => x.id === projectId);
+    if (!p) return [];
+    const owned = new Set(ownedIds || []);
+    const out = [];
+    (p.requiredCaps || []).forEach(cap => {
+      const providers = PARTS
+        .filter(pt => (pt.caps || []).indexOf(cap) !== -1)
+        .map(pt => ({ id: pt.id, name: pt.name, owned: owned.has(pt.id) }))
+        .sort((a, b) => (b.owned ? 1 : 0) - (a.owned ? 1 : 0) || a.name.localeCompare(b.name));
+      if (!providers.length) return;
+      out.push({
+        cap,
+        label: CAPABILITY_CANONICAL[cap] || cap,
+        options: providers,
+        ownedCount: providers.filter(o => o.owned).length,
+      });
+    });
+    return out;
+  }
+
+  /**
+   * PHASE 5 (v5.1.0) — "WHAT SHOULD I BUILD NEXT?" recommender (Toby's own idea).
+   * Given the inventory the user owns, suggest the best next project to tackle:
+   * prefer a buildable project the user hasn't done that (a) builds a NEW skill
+   * (introduces a capability they don't yet have a project for), (b) is in an
+   * easy difficulty band, (c) has high learning value. Falls back to the
+   * closest near-miss if nothing is buildable. Pure + Node-testable.
+   * @param {object} ownedMap  { partId: qty }
+   * @param {Array<string>} [doneIds] project ids already built (to skip)
+   * @returns {{id,title,reason}|null}
+   */
+  function buildNext(ownedMap, doneIds) {
+    const ownedIds = Object.keys(ownedMap || {});
+    if (!ownedIds.length) return null;
+    const done = new Set(doneIds || []);
+    const res = analyze(ownedMap, []);
+    const candidates = res.buildable
+      .map(r => r.project)
+      .filter(p => !done.has(p.id));
+    if (!candidates.length) {
+      // nothing buildable undone — point at the easiest near-miss to unlock
+      const near = res.couldve[0];
+      if (!near) return null;
+      const miss = (near.missing || []).slice(0, 1)
+        .map(m => CAPABILITY_CANONICAL[m.cap] || m.cap).join(', ');
+      return { id: near.project.id, title: near.project.title,
+        reason: 'Not buildable yet — buy ' + (miss || 'a part') + ' to unlock it.' };
+    }
+    // score: new-capability bonus + learning value, penalize harder difficulty
+    const haveCaps = new Set(res.inventoryCaps);
+    let best = null, bestScore = -Infinity;
+    candidates.forEach(p => {
+      const newCaps = (p.requiredCaps || []).filter(c => !haveCaps.has(c)).length;
+      const learn = p.learning || 0;
+      const diffPenalty = (p.difficulty === 'Advanced' ? 2 : p.difficulty === 'Intermediate' ? 1 : 0);
+      const score = newCaps * 3 + learn - diffPenalty;
+      if (score > bestScore) { bestScore = score; best = p; }
+    });
+    if (!best) best = candidates[0];
+    const newCaps = (best.requiredCaps || []).filter(c => !haveCaps.has(c));
+    const reason = newCaps.length
+      ? 'Builds a new skill: ' + newCaps.map(c => CAPABILITY_CANONICAL[c] || c).join(', ') + '.'
+      : 'Great next step in your current skill band — reinforces what you know.';
+    return { id: best.id, title: best.title, reason };
+  }
+
   return {
     analyze,
     rationale,
@@ -578,6 +657,8 @@
     parseDatasheet,
     partGraph,
     bom,
+    substitutions,
+    buildNext,
     setInventory,
     matchProject,
     computeInventoryCaps,

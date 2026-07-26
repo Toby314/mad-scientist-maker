@@ -112,6 +112,41 @@
     return wrap;
   }
 
+  /**
+   * PHASE 5 (v5.1.0) — Substitutions panel. For each required capability, list
+   * every catalog part that satisfies it (so "no DHT22? use a BME280") and mark
+   * which the user already owns. Pure DOM; reads Engine.substitutions().
+   */
+  function renderSubstitutions(p) {
+    const wrap = el('div', 'subs');
+    wrap.appendChild(el('h3', null, '🔄 Part substitutions'));
+    try {
+      const inv = (root.Inventory && root.Inventory.load) ? root.Inventory.load() : { owned: {} };
+      const ownedIds = (root.Inventory && root.Inventory.ownedIds) ? root.Inventory.ownedIds(inv) : [];
+      const subs = E.substitutions(p.id, ownedIds);
+      if (!subs.length) {
+        wrap.appendChild(el('p', 'hint', 'No substitutable parts for this project.'));
+        return wrap;
+      }
+      subs.forEach(s => {
+        const row = el('div', 'sub-row');
+        row.appendChild(el('span', 'sub-cap', escapeHtml(s.label)));
+        const opts = el('span', 'sub-opts');
+        s.options.forEach(o => {
+          const tag = el('span', 'sub-opt' + (o.owned ? ' owned' : ''),
+            escapeHtml(o.name) + (o.owned ? ' ✓' : ''));
+          opts.appendChild(tag);
+        });
+        row.appendChild(opts);
+        wrap.appendChild(row);
+      });
+      wrap.appendChild(el('p', 'hint', 'Any part listed for a capability works — tick whichever you own.'));
+    } catch (e) {
+      wrap.appendChild(el('p', 'hint', 'Substitutions unavailable.'));
+    }
+    return wrap;
+  }
+
   function renderMoreLike(p) {
     const wrap = el('div', 'morelike');
     wrap.appendChild(el('h3', null, '🔁 More like this'));
@@ -210,6 +245,29 @@
       back.addEventListener('click', () => { location.hash = ''; });
       panel.appendChild(back);
 
+      // PHASE 5 (v5.1.0) — bench actions: printable sheet + copy to notes
+      const actions = el('div', 'bench-actions');
+      const printBtn = el('button', 'btn ghost', '🖨️ Printable bench sheet');
+      printBtn.addEventListener('click', () => {
+        document.body.setAttribute('data-print-project', p.id);
+        window.print();
+        document.body.removeAttribute('data-print-project');
+      });
+      actions.appendChild(printBtn);
+      const notesBtn = el('button', 'btn ghost', '📝 Copy to notes');
+      notesBtn.addEventListener('click', () => {
+        const inv = (root.Inventory && root.Inventory.load) ? root.Inventory.load() : { owned: {} };
+        const ownedIds = (root.Inventory && root.Inventory.ownedIds) ? root.Inventory.ownedIds(inv) : [];
+        const md = (root.Share && root.Share.projectMarkdown) ? root.Share.projectMarkdown(p, ownedIds) : '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(md).then(
+            () => { notesBtn.textContent = '✓ Copied!'; setTimeout(() => notesBtn.textContent = '📝 Copy to notes', 1500); },
+            () => {});
+        }
+      });
+      actions.appendChild(notesBtn);
+      panel.appendChild(actions);
+
       panel.appendChild(el('h2', 'section-title', escapeHtml(p.title)));
       panel.appendChild(el('p', 'blurb', escapeHtml(p.blurb)));
 
@@ -237,6 +295,7 @@
 
       panel.appendChild(renderWiring(p));
       panel.appendChild(renderBom(p));
+      panel.appendChild(renderSubstitutions(p));
 
       // ---- Phase 5 Block 1: rationale + teach-me in the detail view ----
       // Pull the same analyze() row so the detail matches the card exactly.

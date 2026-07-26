@@ -57,6 +57,9 @@
     UI.renderShopping(shoppingEl, lastResult.shoppingList);
     UI.renderLearningPaths(document.getElementById('learning-paths'), E.learningPaths(lastResult.buildable.map(r => r.project.id)));
     UI.renderCydPanel(document.getElementById('cyd-panel'), lastResult, state.cydMode);
+    // Phase 5 v5.1.0: "build next" suggestion at top of Projects tab
+    const buildNextEl = document.getElementById('build-next');
+    if (buildNextEl) UI.renderBuildNext(buildNextEl, E.buildNext(state.owned, state.done || []));
     const total = Object.values(state.owned).reduce((a, q) => a + q, 0);
     ownedCount.textContent = total + ' part' + (total === 1 ? '' : 's') + ' owned';
   }

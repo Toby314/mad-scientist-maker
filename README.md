@@ -101,9 +101,9 @@ This app is built in spec-first phases. Current milestone:
 | 3B — Custom parts | Guided capability checklist + preset (no token memorizing) | ✅ done |
 | 3D — CYD first-class | "Optimize for CYD" toggle, re-rank screen builds, 🟡 badge, focus panel | ✅ done |
 | 4 — iPhone/PWA polish | Install prompt, larger touch targets, offline proof | ✅ done (v4.0.0) |
-| 5 — Gap-closing | "Why it fits" reasoning + teach-me, fuzzy/semantic search, datasheet→catalog import + graph, PCB/BOM assist, desktop/MCP packaging | 📋 **Block 1 (Why-it-fits + teach-me) ✅, Block 2 (fuzzy/semantic search) ✅, Block 3 (datasheet import + part graph) ✅, Block 4 (BOM / parts check) ✅ done** — Block 5 (desktop/MCP) planned |
+| 5 — Gap-closing | "Why it fits" reasoning + teach-me, fuzzy/semantic search, datasheet→catalog import + graph, BOM/parts-check, part-substitution engine, build-next recommender, printable bench sheet, MCP server, memory-wiki export | ✅ done (v5.1.0) |
 
-**Phase 5 (current release, v5.0.0) ships:** 67 parts, 33 catalog projects, 33 verified
+**Phase 5 (current release, v5.1.0) ships:** 67 parts, 33 catalog projects, 33 verified Arduino/C++ sketches
 ESP32-S3 sketches, custom-part creator, CYD-first recommendations, and iPhone/PWA polish
 (install prompt, 44px touch targets, responsive ≤480px, proven offline cache).
 
@@ -231,6 +231,6 @@ mad-scientist-maker/
   hint, 44px touch targets, responsive ≤480px, and a proven offline-cache check
   (every load-bearing asset is precached; app runs offline) — Phase 4, v4.0.0.
 
-**Next up (Phase 5 Block 5):** see [`plans/phase5.md`](plans/phase5.md) — desktop/MCP packaging; close gaps the
+**Phase 5 is complete (v5.1.0).** See [`plans/phase5.md`](plans/phase5.md) for the block breakdown. The MCP server lives in `mcp/server.js` (run `npm run mcp`); wire it into any MCP client with `node mcp/server.js`.
 competitive scan exposed (reasoning/teach-me, fuzzy search, datasheet import +
 knowledge graph, PCB/BOM assist, desktop + MCP packaging).

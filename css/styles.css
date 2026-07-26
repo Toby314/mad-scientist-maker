@@ -444,3 +444,29 @@ main { max-width: 1100px; margin: 0 auto; padding: 18px; }
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 44px;
 }
+
+/* ===== PHASE 5 (v5.1.0) new components: substitutions, bench actions, build-next ===== */
+.bench-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
+.subs { margin: 12px 0; }
+.subs h3 { margin-bottom: 6px; }
+.sub-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed rgba(127,127,127,.2); }
+.sub-cap { font-weight: 600; min-width: 120px; }
+.sub-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.sub-opt { display: inline-block; padding: 2px 8px; border-radius: 999px; background: rgba(127,127,127,.18); font-size: .85rem; }
+.sub-opt.owned { background: rgba(60,180,90,.25); border: 1px solid rgba(60,180,90,.6); }
+.build-next { margin: 10px 0; }
+.next-card { border-left: 4px solid var(--accent, #4a9); background: rgba(74,153,170,.08); }
+.next-title { font-size: 1.1rem; font-weight: 700; text-decoration: none; }
+.next-reason { margin: 4px 0 0; color: var(--muted, #9aa); }
+
+/* ===== Printable bench sheet (window.print on a project detail) ===== */
+@media print {
+  body * { visibility: hidden; }
+  #tab-detail, #tab-detail * { visibility: visible; }
+  #tab-detail { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  .bench-actions, .teach, #tab-detail .btn { display: none !important; }
+  .card, .bom-item, .sub-row { break-inside: avoid; }
+  body { font-size: 12pt; }
+  h2.section-title { font-size: 20pt; }
+}
+

@@ -158,4 +158,23 @@ assert(linkedTitles.length > 0, 'partGraph lists projects sharing sensor-temp');
 const grNone = Engine.partGraph('does_not_exist');
 assert(grNone.length === 0, 'partGraph returns [] for unknown project');
 
+// ---- Phase 5 v5.1.0: substitution engine + build-next recommender ----
+// weather_station needs sensor-temp + sensor-humidity + display + mcu (+ optional).
+const subs = Engine.substitutions('weather_station', ['esp32', 'dht22', 'ssd1306']);
+const tempSub = subs.find(s => s.cap === 'sensor-temp');
+assert(!!tempSub, 'substitutions returns an entry for sensor-temp');
+assert(tempSub.options.some(o => o.id === 'dht22' && o.owned), 'owned DHT22 is marked owned in substitutions');
+assert(tempSub.options.some(o => o.id === 'bme280'), 'BME280 offered as a temp/humidity substitute for DHT22');
+// owned parts sort first
+const firstOwned = tempSub.options.find(o => o.owned);
+assert(tempSub.options[0].owned, 'owned options float to the top of a substitution row');
+
+const bn = Engine.buildNext(sample, []);
+assert(!!bn && !!bn.id, 'buildNext returns a suggestion object');
+assert(typeof bn.reason === 'string' && bn.reason.length > 0, 'buildNext reason is non-empty');
+const bnEmpty = Engine.buildNext({}, []);
+assert(bnEmpty === null, 'buildNext returns null with empty inventory');
+const bnDone = Engine.buildNext(sample, [bn.id]);
+assert(!!bnDone && bnDone.id !== bn.id, 'buildNext skips already-done project');
+
 console.log(process.exitCode ? '\nSOME ENGINE TESTS FAILED' : '\nALL ENGINE TESTS PASSED');

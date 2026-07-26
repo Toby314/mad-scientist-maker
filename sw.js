@@ -21,6 +21,7 @@ const SHELL = [
   'js/taxonomy.js',
   'js/catalog.js',
   'js/engine.js',
+  'js/share.js',
   'js/inventory.js',
   'js/ai.js',
   'js/ui.js',

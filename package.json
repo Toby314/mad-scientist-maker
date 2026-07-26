@@ -7,7 +7,9 @@
     "test": "node engine.test.js && node test/dom.test.js",
     "test:engine": "node engine.test.js",
     "test:dom": "node test/dom.test.js",
-    "serve": "python3 -m http.server 8123"
+    "test:mcp": "node mcp/server.test.js",
+    "serve": "python3 -m http.server 8123",
+    "mcp": "node mcp/server.js"
   },
   "devDependencies": {
     "jsdom": "^24.0.0"
