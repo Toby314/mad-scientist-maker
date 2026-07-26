@@ -146,6 +146,38 @@
       card.appendChild(chips);
     }
 
+    // ---- Phase 5 Block 1: "Why it fits" rationale (self-explanation) ----
+    // Pure data from Engine.rationale(r); rendered verbatim. No network, no AI.
+    const rat = E.rationale(r);
+    const ratBox = el('div', 'rationale');
+    const fit = el('div', 'fit');
+    fit.innerHTML = '<b>✅ Why it fits:</b> ' + escapeHtml(rat.fit);
+    ratBox.appendChild(fit);
+    if (rat.uses.length) {
+      const chipWrap = el('div', 'chips');
+      rat.uses.forEach(u => chipWrap.appendChild(el('span', 'chip uses', escapeHtml(u))));
+      ratBox.appendChild(chipWrap);
+    }
+    const whyNow = el('div', 'why-now');
+    whyNow.innerHTML = escapeHtml(rat.whyNow);
+    ratBox.appendChild(whyNow);
+    card.appendChild(ratBox);
+
+    // ---- Phase 5 Block 1: Teach-me expander (offline, from project.teach) ----
+    if (p.teach && p.teach.length) {
+      const d = document.createElement('details');
+      d.className = 'teach';
+      const sum = document.createElement('summary');
+      sum.textContent = '🧠 Teach me (why each step)';
+      d.appendChild(sum);
+      const body = el('div', 'teach-body');
+      const ol = el('ol');
+      p.teach.forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+      body.appendChild(ol);
+      d.appendChild(body);
+      card.appendChild(d);
+    }
+
     // steps
     if (p.steps && p.steps.length) {
       const ol = el('ol', 'steps');
@@ -335,7 +367,48 @@
     }
   }
 
+  // ---------------- SEARCH RESULTS (Phase 5 Block 2) ----------------
+  // Renders the fuzzy/semantic search hits: matching PARTS (so you can tick
+  // them) and matching PROJECTS (so you can jump to one). Pure rendering of the
+  // Engine.search() result — no matching logic here.
+  function renderSearchResults(container, result, onPartPick) {
+    container.innerHTML = '';
+    if (!result || (result.parts.length === 0 && result.projects.length === 0)) {
+      container.appendChild(el('div', 'empty', 'No matches. Try a part name, a capability, or a project idea (e.g. "screen", "motion sensor", "plant").'));
+      return;
+    }
+    if (result.parts.length) {
+      container.appendChild(el('h3', 'search-head', '🔧 Parts'));
+      const grid = el('div', 'search-parts');
+      result.parts.slice(0, 8).forEach(hit => {
+        const part = hit.part;
+        const row = el('button', 'search-part');
+        row.type = 'button';
+        row.innerHTML = '<span class="sp-name">' + escapeHtml(part.name) + '</span>' +
+          '<span class="sp-cap muted">' + escapeHtml((part.caps || []).join(', ')) + '</span>' +
+          (hit.why ? '<span class="sp-why muted">matched: ' + escapeHtml(hit.why) + '</span>' : '');
+        row.addEventListener('click', () => onPartPick && onPartPick(part.id));
+        grid.appendChild(row);
+      });
+      container.appendChild(grid);
+    }
+    if (result.projects.length) {
+      container.appendChild(el('h3', 'search-head', '📦 Projects'));
+      const list = el('div', 'search-projects');
+      result.projects.slice(0, 8).forEach(hit => {
+        const p = hit.project;
+        const a = el('a', 'search-project');
+        a.href = '#/project/' + p.id;
+        a.innerHTML = '<span class="sp-name">' + escapeHtml(p.title) + '</span>' +
+          '<span class="sp-blurb muted">' + escapeHtml(p.blurb) + '</span>' +
+          (hit.why ? '<span class="sp-why muted">matched: ' + escapeHtml(hit.why) + '</span>' : '');
+        list.appendChild(a);
+      });
+      container.appendChild(list);
+    }
+  }
+
   root.UI = {
-    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, renderCydPanel, escapeHtml,
+    renderInventory, projectCard, nearCard, renderProjects, renderShopping, renderLearningPaths, renderCydPanel, renderSearchResults, escapeHtml,
   };
 })(window);

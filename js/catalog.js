@@ -53,6 +53,11 @@
         'In code: read the button; when pressed, turn the LED on.',
       ],
       levelUp: 'Add a second LED and make the button toggle between them.',
+      teach: [
+        'Solder the LED with its anode (long leg) toward the resistor first — if you reverse it, nothing lights and you\'ll waste time chasing a "broken" LED.',
+        'The 220Ω resistor isn\'t optional: without it the GPIO pin tries to source too much current and can cook the MCU.',
+        'Use INPUT_PULLUP on the button pin (not an external resistor) because the ESP32 has the resistor built in — one less part to wire and one less way to get it wrong.',
+      ],
       coolness: 2, learning: 5, tags: ['gpio', 'basics'],
       // v2: wiring table (reference board = ESP32) + optional deeper guide.
       // Pin numbers are a starting point; adapt if your board differs.
@@ -77,6 +82,11 @@
         'Read the pot (0–4095), map it to 0–255, write it as PWM duty to the LED.',
       ],
       levelUp: 'Log the pot value over Serial and plot it to SEE the ADC curve.',
+      teach: [
+        'Drive the LED from a PWM-capable GPIO because "brightness" on a digital pin is faked by blinking faster than your eye can see — that blinking ratio is the duty cycle.',
+        'The pot\'s wiper goes to an ADC pin; the two ends go to 3.3V and GND so the wiper voltage sweeps the full range the ESP32 can read (0–4095).',
+        'Map pot 0–4095 down to PWM 0–255 so turning the knob feels linear — raw ADC numbers would make the top half of the knob do almost nothing.',
+      ],
       coolness: 3, learning: 4, tags: ['pwm', 'analog'],
     },
     {
@@ -94,6 +104,11 @@
         'When the PIR goes HIGH, turn the light on for a few seconds.',
       ],
       levelUp: 'Add a light sensor so it only triggers at night.',
+      teach: [
+        'The PIR runs on 5V but its OUT pin is 3.3V-safe, so you power it from 5V and read it on any ESP32 GPIO without a level shifter.',
+        'A PIR output is just a digital HIGH while it senses motion, so the code is an if-statement, not an analog read — that is why it is a beginner project.',
+        'Hold the light on for a few seconds after the last trigger, because the PIR re-fires constantly while something moves and would strobe without that delay.',
+      ],
       coolness: 3, learning: 4, tags: ['sensors', 'automation'],
       wiring: [
         { part: 'ESP32', signal: 'GPIO for LED', pin: 'GPIO 2', note: 'LED + 220Ω → GND' },
@@ -117,6 +132,11 @@
         'Render temp/humidity on the OLED instead of Serial.',
       ],
       levelUp: 'Add an RTC + log a reading every 10 min to see trends.',
+      teach: [
+        'The DHT22 data line needs a 4.7k–10k pull-up to 3.3V because it\'s an open-collector bus — without it the MCU can\'t read the bit stream.',
+        'BME280 talks I2C on the same SDA/SCL bus as the OLED, so one pair of wires serves both — that\'s why we share GPIO 21/22 instead of wiring two separate buses.',
+        'Start by printing to Serial Monitor before touching the display; if the numbers are garbage you fix the sensor, not the screen AND the sensor at once.',
+      ],
       coolness: 4, learning: 4, tags: ['sensors', 'display'],
       wiring: [
         { part: 'ESP32', signal: 'I2C SDA', pin: 'GPIO 21', note: 'to sensor SDA' },
@@ -141,6 +161,11 @@
         'Optional: beep the buzzer or show "WATER ME" on the OLED when dry.',
       ],
       levelUp: 'Average several readings so it doesn’t flicker around the threshold.',
+      teach: [
+        'The soil probe is just a resistor that changes with moisture, so its OUT pin goes to an ADC — wet soil reads low, dry reads high.',
+        'Pick the "dry" threshold from a real reading, not a guess: read it once when the plant is actually dry, then set the alarm just below that.',
+        'Add hysteresis (turn the alarm on below 300, off above 350) so it doesn\'t chirp every time the value jitters right at the edge.',
+      ],
       coolness: 3, learning: 4, tags: ['sensors', 'plants'],
     },
     {
@@ -157,6 +182,11 @@
         'On press, play a two-note chime with tone().',
       ],
       levelUp: 'Play a short melody stored as an array of notes.',
+      teach: [
+        'Drive the piezo buzzer straight from a GPIO with no transistor — it is a speaker the MCU oscillates itself via tone().',
+        'Use the buttons internal pull-up (INPUT_PULLUP) so you need only one wire to ground, not an external resistor like the old tutorials show.',
+        'Keep the chime timing in code as tone(freq, ms) pairs — change the tune by editing the array, no rewiring needed.',
+      ],
       coolness: 2, learning: 3, tags: ['audio', 'basics'],
     },
     {
@@ -174,6 +204,11 @@
         'Print (and optionally show) the distance.',
       ],
       levelUp: 'Trigger an alarm when something enters a set range.',
+      teach: [
+        'The HC-SR04 is 5V for reliable echo, so power it from 5V, but its Echo pin still outputs a 3.3V-safe pulse, so no level shifter is needed to read it on an ESP32.',
+        'You derive distance from time: send a 10us Trig pulse, measure how long Echo stays high; sound travels about 34cm per ms, so distance equals time divided by 58 in cm.',
+        'Fire the Trig pin then read Echo immediately — if you delay before reading, you miss the start of the pulse and get garbage readings.',
+      ],
       coolness: 3, learning: 4, tags: ['sensors', 'distance'],
     },
     {
@@ -191,6 +226,11 @@
         'Read light; map dark→high PWM, bright→low PWM.',
       ],
       levelUp: 'Add a pot to set the brightness "ceiling".',
+      teach: [
+        'An LDR is just a light-dependent resistor, so you read it as a voltage divider into an ADC — a bright room gives low resistance and a low reading, darkness gives high.',
+        'Invert the mapping: the dimmer used light to drive brightness directly, but here dark must mean bright, so subtract the reading from the max.',
+        'Calibrate the ceiling once by reading the room at its darkest — a threshold that worked on one bench will misbehave under different lighting.',
+      ],
       coolness: 2, learning: 3, tags: ['analog', 'light'],
     },
     {
@@ -208,6 +248,11 @@
         'Draw "Hello, Maker!" and a small box.',
       ],
       levelUp: 'Scroll the text across the screen.',
+      teach: [
+        'The OLED uses I2C, so just two wires (SDA and SCL) carry both commands and data, which is why one bus can drive many devices at different addresses.',
+        'The SSD1306 default address is 0x3C; if your screen is blank, the most common fix is that the address is actually 0x3D — try that before assuming a wiring fault.',
+        'Drawing is putting a pixel or group at x,y; text is just a font bitmap stamped at coordinates, so understanding x,y covers most of any custom UI.',
+      ],
       coolness: 3, learning: 4, tags: ['display', 'i2c'],
       wiring: [
         { part: 'ESP32', signal: 'I2C SDA', pin: 'GPIO 21', note: 'OLED SDA' },
@@ -231,6 +276,11 @@
         'Loop: tone() each note for its duration.',
       ],
       levelUp: 'Read the notes from Serial so you can "type" a song.',
+      teach: [
+        'A note is a frequency in Hz (middle A is 440), so a melody is an array of (frequency, duration) pairs you walk through with tone().',
+        'Passive buzzers need tone() to oscillate them; an active buzzer only clicks once per pin toggle, so know which you have or the melody will not play.',
+        'Add a small gap (about 50ms) between notes so they stay distinct instead of blurring into one continuous drone.',
+      ],
       coolness: 3, learning: 3, tags: ['audio'],
     },
     {
@@ -248,6 +298,11 @@
         'Optional: map a pot to the angle for manual control.',
       ],
       levelUp: 'Add a second servo and make them move in sequence (a "wave").',
+      teach: [
+        'A servo wants a PWM pulse of 0.5 to 2.5ms repeated about 50 times per second, and the pulse width sets the angle — 1.5ms is center, not a duty-cycle percentage.',
+        'Big servos need 5V and can spike current while moving, so power them from a separate 5V supply with shared ground rather than the ESP32 3.3V rail.',
+        'With a pot as input you map the 0 to 4095 knob straight to 0 to 180 degrees — that direct knob-turns-arm feel is the servo library doing the pulse math.',
+      ],
       coolness: 3, learning: 3, tags: ['motor', 'pwm'],
     },
     {
@@ -265,6 +320,11 @@
         'Optional: map it to LED brightness or OLED bar.',
       ],
       levelUp: 'Debounce it and use it to pick a menu item.',
+      teach: [
+        'A pot is a variable resistor: its wiper taps a fraction of 3.3V, so turning it sweeps the ADC reading 0 to 4095 in step with the shaft.',
+        'Open the Serial Plotter (not just the Monitor) to see the value as a live line — that makes analog input click far faster than reading scrolling numbers.',
+        '3.3V gives 4095 steps of about 0.8mV each; that resolution is plenty for a knob but overkill for an on-or-off switch, which should use digital input.',
+      ],
       coolness: 2, learning: 4, tags: ['analog', 'basics'],
     },
 
@@ -284,6 +344,11 @@
         'Write time to the RTC; each loop read RTC and draw HH:MM:SS.',
       ],
       levelUp: 'Add a buzzer alarm set from Serial.',
+      teach: [
+        'Join WiFi with WiFi.begin(ssid, pass) and wait on WiFi.status() — most "clock won\'t start" bugs are a wrong SSID or a router that blocks the ESP32.',
+        'NTP gives UTC; use the timezone offset to shift it, because if you skip that step your clock will be off by your local offset all year.',
+        'The DS3231 RTC keeps time on a coin cell when the ESP32 loses power, so you fetch NTP once and read the RTC forever — that is why a reboot never loses the time.',
+      ],
       coolness: 4, learning: 4, tags: ['wifi', 'clock', 'display'],
     },
     {
@@ -301,6 +366,11 @@
         'Parse the JSON; draw "Inside 22°/50%  Outside 18°/60%".',
       ],
       levelUp: 'Cache the forecast and only refresh every 10 min to save power.',
+      teach: [
+        'An HTTP client (WiFiClient + HTTPClient) does a GET and returns a JSON string you parse with a library — this request-then-parse pattern is in nearly every connected gadget.',
+        'JSON is key value pairs; you pull fields by name like doc["main"]["temp"], so a typo in a key silently gives nothing — print the raw string first to debug.',
+        'Pair the local sensor reading with the internet forecast on one screen so you learn the difference between measured and predicted data.',
+      ],
       coolness: 5, learning: 5, tags: ['wifi', 'sensors', 'display'],
     },
     {
@@ -318,6 +388,11 @@
         'Optional: beep when DRY.',
       ],
       levelUp: 'Add a pump + relay to auto-water when dry.',
+      teach: [
+        'Moving the moisture readout onto a screen teaches UI layout: decide what state the plant is in (DRY, OK, WET) and draw a bar plus a label for each.',
+        'The OLED and the moisture sensor both share the I2C or ADC pins, so the screen adds display without stealing the sensor wiring.',
+        'Show the raw number during debugging and the state label for the finished piece — the number proves the sensor works, the label is what a human reads.',
+      ],
       coolness: 3, learning: 4, tags: ['sensors', 'plants', 'display'],
     },
     {
@@ -335,6 +410,11 @@
         'If allowed, pulse the relay (unlock) and beep OK.',
       ],
       levelUp: 'Store allowed UIDs in EEPROM so you can "enroll" new tags.',
+      teach: [
+        'The RC522 uses SPI, which needs SDA (chip select), SCK (clock), MOSI, MISO — four wires plus reset, and the order matters because SPI has no addressing like I2C.',
+        'A tag exposes a UID (unique ID), not a name; you compare the read UID to an allow-list array, so the lock is only as secure as that list.',
+        'The relay isolates the low-voltage ESP32 from the latch coil, so a fault on the 12V side cannot feed back and cook the MCU.',
+      ],
       coolness: 5, learning: 4, tags: ['rfid', 'security', 'spi'],
     },
     {
@@ -352,6 +432,11 @@
         'On eating food, grow; on self/wall hit, game over.',
       ],
       levelUp: 'Add a score on the screen + a "game over" buzzer.',
+      teach: [
+        'A game is a loop: read input, update state, draw — and the order matters, so always update the model before you render or you show stale frames.',
+        'The snake body is an array of (x, y) cells; when it eats, you push a new cell, and when it moves you shift the tail — arrays are the whole game.',
+        'Buttons on a tiny screen are just digital inputs; map each to a direction and ignore opposite-direction presses or the snake reverses into itself.',
+      ],
       coolness: 5, learning: 4, tags: ['game', 'display'],
     },
     {
@@ -369,6 +454,11 @@
         'Optional: detect touch zones as buttons.',
       ],
       levelUp: 'Make a 2-screen UI you switch by touching a tab.',
+      teach: [
+        'A color TFT is an SPI device, so it shares the SPI bus with other peripherals but needs its own CS pin — that chip-select is what keeps its data separate.',
+        'The CYD (Cheap Yellow Display) bundles an ESP32, screen, SD slot, and touch on one board, which is why it is the fastest path to a phone-like UI with no wiring.',
+        'Drawing primitives (fillRect, drawString) are your building blocks; a "tab" is just two rectangles you check against the last touch point, no OS needed.',
+      ],
       coolness: 5, learning: 4, tags: ['display', 'tft', 'cyd'],
     },
     {
@@ -386,6 +476,11 @@
         'Enter deep sleep; wake every N minutes via timer/RTC.',
       ],
       levelUp: 'Add LoRa to send the reading to a base station wirelessly.',
+      teach: [
+        'A Li-ion cell sits around 3.7V but drops as it drains, so the TP4056 charges it and the boost converter forces a steady 5V for the ESP32 — that steady rail is why it runs at all near empty.',
+        'Deep sleep cuts current from milliamps to microamps; you wake on a timer or RTC interrupt, take one reading, then sleep again — that is the trick to weeks of battery life.',
+        'Power budget is the real lesson: every mA you shave off the awake time multiplies into days of runtime, which is why you measure, not guess.',
+      ],
       coolness: 4, learning: 5, tags: ['power', 'sensors', 'battery'],
     },
     {
@@ -403,6 +498,11 @@
         'Optional: show messages on an OLED.',
       ],
       levelUp: 'Build a 3+ node mesh that relays messages.',
+      teach: [
+        'LoRa is a long range, low power radio with no router needed, so two boards can talk kilometers apart where WiFi or BLE would be dead.',
+        'The SX1278 talks SPI, so it needs the usual four SPI wires plus an antenna — without the antenna attached you can damage the radio by transmitting into an open pin.',
+        'Peer to peer means you define the packet yourself (sender, receiver, payload); there is no server, which is exactly why it works off grid.',
+      ],
       coolness: 5, learning: 4, tags: ['lora', 'radio'],
     },
     {
@@ -420,6 +520,11 @@
         'Notify on change; watch it on a phone BLE app.',
       ],
       levelUp: 'Add a "too hot" threshold that also beeps locally.',
+      teach: [
+        'BLE is Bluetooth Low Energy, and you expose sensor data as a GATT characteristic your phone reads without any app install — a generic BLE scanner shows it.',
+        'Notify means the ESP32 pushes the new value only when it changes, which saves the battery drain of your phone polling constantly.',
+        'Keep the BLE stack idle except on change; pairing and advertising are the power-hungry parts, so only advertise what you must.',
+      ],
       coolness: 4, learning: 4, tags: ['ble', 'sensors', 'phone'],
     },
     {
@@ -437,6 +542,11 @@
         'Optional: encoder sets the target position.',
       ],
       levelUp: 'Add limit switches so it "homes" on power-up.',
+      teach: [
+        'A stepper moves in exact steps with no feedback, so you know the angle by counting pulses — that open-loop control is why it holds position when stopped.',
+        'The ULN2003 (for the 28BYJ-48) or A4988 fires the coils in sequence; the driver does the heavy current switching so the ESP32 GPIOs stay safe.',
+        'Because there is no encoder, a limit switch at startup gives you a known zero — without it the motor never knows where "home" is after a power loss.',
+      ],
       coolness: 3, learning: 4, tags: ['motor', 'stepper'],
     },
     {
@@ -454,6 +564,11 @@
         'Write PWM duty to spin; flip pins to reverse.',
       ],
       levelUp: 'Add a tachometer (encoder) for closed-loop speed.',
+      teach: [
+        'A DC motor only spins when voltage is applied, so reversing needs an H-bridge (L298N) that can swap the polarity — a single GPIO could never do that.',
+        'PWM on the H-bridge enable pin sets speed by varying the average voltage; the higher the duty, the faster the motor turns.',
+        'The driver sits between the MCU and motor on purpose: the motor can draw amps that would fry the ESP32, so the driver is the buffer that takes the abuse.',
+      ],
       coolness: 3, learning: 4, tags: ['motor', 'pwm'],
     },
     {
@@ -471,6 +586,11 @@
         'Press the encoder to "select".',
       ],
       levelUp: 'Make selecting an item launch a different project.',
+      teach: [
+        'A rotary encoder outputs two square waves 90 degrees out of phase (quadrature), so comparing which channel leads tells you direction — that phase offset is the whole trick.',
+        'Read the two channels on interrupt pins so you never miss a tick; polling in the loop drops steps the instant anything else blocks.',
+        'The OLED shows the menu while the encoder only moves a highlight and a press selects — separating display from input is the pattern every knob UI reuses.',
+      ],
       coolness: 4, learning: 4, tags: ['display', 'ui', 'encoder'],
     },
     {
@@ -488,6 +608,11 @@
         'Optional: show the ppm-ish value on the OLED.',
       ],
       levelUp: 'Add WiFi to push a phone alert.',
+      teach: [
+        'An MQ-2 needs about 20 seconds of warm-up before its reading is meaningful, so read it after that delay or you chase a false alarm that was just the sensor settling.',
+        'It outputs an analog voltage, so a threshold (not a digital trigger) decides the alarm — pick the level from a real baseline reading in your space.',
+        'A latching alarm state stays on after the gas clears until you acknowledge it, which is safer than a sensor that resets the instant the air improves.',
+      ],
       coolness: 4, learning: 3, tags: ['sensors', 'safety', 'audio'],
     },
     {
@@ -505,6 +630,11 @@
         'Shift the columns left each tick to scroll.',
       ],
       levelUp: 'Show the time scrolling (needs an RTC).',
+      teach: [
+        'The MAX7219 matrix is SPI, so CLK, DIN, and CS carry the pixels; you shift column bits in and let the chip hold the display, which keeps your loop free.',
+        'A font is just a lookup table mapping each character to a bitmap, so scrolling text means pulling the right bitmaps and shifting them left one column per tick.',
+        'Refresh fast enough that the eye sees motion but not flicker; about 20 to 30 shifts per second is the sweet spot for a smooth scroll.',
+      ],
       coolness: 4, learning: 3, tags: ['display', 'led'],
     },
     {
@@ -522,6 +652,11 @@
         'Drive the relay accordingly.',
       ],
       levelUp: 'Add WiFi to fetch sunrise/sunset times for auto on/off.',
+      teach: [
+        'The DS3231 RTC runs on a coin cell, so the schedule keeps ticking through a power loss — that battery backup is why a timer beats relying on uptime.',
+        'Compare the current RTC time to ON and OFF times every loop; the test is just "is now between these two", which is simple but easy to flip if you use >= wrong.',
+        'The relay isolates mains from the ESP32, so the 120V side is physical separation — treat the relay contacts as lethal and never probe them live.',
+      ],
       coolness: 3, learning: 4, tags: ['automation', 'relay', 'clock'],
     },
     {
@@ -539,6 +674,11 @@
         'Optional: fetch a reading over WiFi and refresh hourly.',
       ],
       levelUp: 'Show a daily weather "card" that refreshes once a morning.',
+      teach: [
+        'E-ink only draws power while changing pixels, so a wall display can run for months on a battery by refreshing once an hour instead of staying lit.',
+        'The refresh is slow (a second or so) and the screen flashes, so design for infrequent updates — it is a clock or notice board, not a live gauge.',
+        'SPI carries the bitmap with BUSY, RES, DC, and CS pins; poll BUSY before sending the next command or the panel locks up mid-draw.',
+      ],
       coolness: 4, learning: 4, tags: ['display', 'eink', 'power'],
     },
 
@@ -558,6 +698,11 @@
         'Optional: run the node on a 18650 + deep sleep.',
       ],
       levelUp: 'Add a second node on a different address (multi-sensor net).',
+      teach: [
+        'You split the system into a node (measures, sends) and a base (receives, shows) — that sender/receiver split is the foundation of every wireless sensor net.',
+        'Give each node its own address so the base can tell them apart; without an address you cannot have more than one node on the same channel.',
+        'Run the node on a 18650 with deep sleep so it sips power between packets, which is what makes a remote station practical off-grid.',
+      ],
       coolness: 5, learning: 5, tags: ['lora', 'sensors', 'network'],
     },
     {
@@ -575,6 +720,11 @@
         'Pair from a phone and use it in a game.',
       ],
       levelUp: 'Add vibration/LED feedback on button press.',
+      teach: [
+        'Beyond notify, you emulate a real HID device, so the phone or PC sees your board as a gamepad with no app — that is the BLE HID profile doing the work.',
+        'Buttons and the encoder become HID reports (key presses and an axis), so you map a physical action to a report field before you send it.',
+        'Pairing is one-time; after that the board just advertises and connects, which is why a HID gadget feels instantly plug-and-play to the OS.',
+      ],
       coolness: 5, learning: 4, tags: ['ble', 'game', 'input'],
     },
     {
@@ -592,6 +742,11 @@
         'When ARMED and PIR trips → sound alarm; correct tag → DISARM.',
       ],
       levelUp: 'Add WiFi to send "intrusion" to your phone with a timestamp.',
+      teach: [
+        'A state machine (DISARMED to ARMED to ALARM) is the spine: the same PIR means different things depending on the state, which is why you track state, not just events.',
+        'The RFID tag is your key to move between ARMED and DISARMED; the UID check is what makes it a lock instead of just a motion beeper.',
+        'The buzzer only sounds in the ALARM state, so wiring up the sensor is safe to test in DISARMED while the logic stays dormant until you arm.',
+      ],
       coolness: 5, learning: 5, tags: ['security', 'rfid', 'state-machine'],
     },
     {
@@ -609,6 +764,11 @@
         'Trigger a snapshot from the page or a PIR interrupt.',
       ],
       levelUp: 'Record motion-triggered clips to the microSD card.',
+      teach: [
+        'The OV2640 camera captures a JPEG that the ESP32 streams out, so a "webcam" is really just serving image bytes from a tiny web server.',
+        'The CameraWebServer example does the hard part; you set SSID and password, flash, then open the printed IP — most failures are wiring or the wrong board model selected.',
+        'Hold GPIO 0 to GND while flashing the ESP32-CAM, because it boots into a special download mode that way — that is the quirk every CAM user trips over first.',
+      ],
       coolness: 4, learning: 4, tags: ['camera', 'wifi', 'web'],
       wiring: [
         { part: 'ESP32-CAM', signal: '5V', pin: '5V', note: 'FTDI VCC → 5V' },
@@ -631,6 +791,11 @@
         'Publish readings to the coordinator over 802.15.4.',
       ],
       levelUp: 'Add sleep cycling so the node runs months on a 18650.',
+      teach: [
+        'Zigbee and Thread form a self-healing mesh, so if one node drops, traffic reroutes — that resilience is why it suits whole-house sensor nets better than point-to-point links.',
+        'Only the ESP32-C5 or C6 has the 802.15.4 radio, so this project sets the board choice; the other ESP32 families cannot join the mesh at all.',
+        'As an end-device the node can sleep most of the time and wake to report, which is how it outlasts a WiFi node that must stay awake to hold a connection.',
+      ],
       coolness: 4, learning: 5, tags: ['zigbee', 'radio', 'low-power'],
     },
   ];

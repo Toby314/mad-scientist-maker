@@ -333,6 +333,55 @@
   // Weight map for the CYD relevance score (defaults to 1 if not listed above).
   const CYD_CAP_WEIGHT = { 'display-spi-tft': 3, 'display-eink': 2, 'touch': 2, 'display-ledmatrix': 1 };
 
+  // =============================================================================
+  // SEARCH_SYNONYMS  (Phase 5 Block 2 — fuzzy/semantic search vocabulary)
+  // -----------------------------------------------------------------------------
+  // Maps a plain-language query term to the canonical tokens/names it should
+  // also match. This is the offline "semantic" layer: we expand a user's words
+  // into the taxonomy's own vocabulary so "motion sensor" finds the PIR, and
+  // "screen" finds OLED/TFT/e-ink/CYD builds — no embeddings, no network.
+  // Keys are lower-case; values are arrays of tokens/names to also consider.
+  // =============================================================================
+  const SEARCH_SYNONYMS = {
+    'motion sensor':   ['pir', 'motion', 'motion-light', 'security-system'],
+    'motion':          ['pir', 'motion', 'motion-light', 'security-system'],
+    'pir':             ['motion', 'motion sensor'],
+    'screen':          ['oled', 'tft', 'eink', 'display', 'cyd', 'tft_dashboard', 'oled_hello', 'eink_frame'],
+    'display':         ['oled', 'tft', 'eink', 'screen', 'cyd'],
+    'oled':            ['screen', 'display', 'ssd1306'],
+    'tft':             ['screen', 'display', 'cyd', 'tft_dashboard'],
+    'cyd':             ['screen', 'display', 'tft', 'touch'],
+    'temp':            ['temperature', 'sensor-temp', 'weather', 'weather_station', 'battery_node', 'ble_temp', 'wifi_weather_dash'],
+    'temperature':     ['temp', 'sensor-temp', 'weather'],
+    'humidity':        ['sensor-humidity', 'weather', 'weather_station', 'wifi_weather_dash', 'plant_monitor'],
+    'knob':            ['potentiometer', 'pot_read', 'pwm_dimmer', 'rotary_menu'],
+    'pot':             ['potentiometer', 'knob'],
+    'led':             ['led', 'blink_button', 'nightlight', 'led_matrix_scroller'],
+    'buzzer':          ['buzzer', 'doorbell', 'buzzer_melody', 'gas_alarm'],
+    'motor':           ['dc-motor', 'servo', 'stepper', 'dc_motor_pwm', 'servo_sweep', 'stepper_controller'],
+    'servo':           ['motor', 'servo_sweep'],
+    'stepper':         ['motor', 'stepper_controller'],
+    'relay':           ['relay', 'smart_relay_timer', 'rfid_door_lock', 'motion_light'],
+    'rfid':            ['rfid', 'rfid_door_lock', 'security-system'],
+    'wifi':            ['wifi', 'wifi_clock', 'wifi_weather_dash', 'cam_snapshot', 'ble_temp'],
+    'bluetooth':       ['ble', 'ble_temp', 'ble_gamepad'],
+    'ble':             ['bluetooth', 'ble_temp', 'ble_gamepad'],
+    'lora':            ['lora', 'lora_messenger', 'weather_lora_remote'],
+    'zigbee':          ['zigbee', 'zigbee_sensor'],
+    'battery':         ['battery-18650', 'battery_node', 'weather_lora_remote', 'zigbee_sensor'],
+    'clock':           ['rtc', 'wifi_clock', 'smart_relay_timer', 'led_matrix_scroller'],
+    'rtc':             ['clock', 'wifi_clock', 'smart_relay_timer'],
+    'plant':           ['plant_monitor', 'plant_monitor_display', 'sensor-moisture'],
+    'moisture':        ['sensor-moisture', 'plant', 'plant_monitor'],
+    'gas':             ['sensor-gas', 'gas_alarm'],
+    'smoke':           ['sensor-gas', 'gas_alarm'],
+    'distance':        ['sensor-distance', 'distance_ranger'],
+    'camera':          ['camera', 'cam_snapshot'],
+    'webcam':          ['camera', 'cam_snapshot'],
+    'game':            ['retro_snake', 'ble_gamepad', 'buzzer_melody'],
+    'snake':           ['retro_snake', 'game'],
+  };
+
   return { CATEGORIES, PARTS, CAPABILITY_CANONICAL, CAPABILITY_GROUPS, ASSUMED_BASICS,
-           CYD_DISPLAY_CAP, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT };
+           CYD_DISPLAY_CAP, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT, SEARCH_SYNONYMS };
 });

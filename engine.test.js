@@ -96,4 +96,66 @@ if (tftProj) {
   assert(tftScore >= 3, 'cydScore of a TFT build is >= 3 (weighted by screen use): ' + tftScore);
   console.log('   cydScore(TFT build) =', tftScore, '| top build =', ranked[0].project.title);
 }
+// ---- Phase 5 Block 1: rationale (self-explanation) ----
+const buildRow = { status: 'buildable', project: { id: 'x', difficulty: 'Beginner', buildTime: '~1h' },
+  missing: [], optHave: ['display-i2c-oled'], usedParts: { mcu: 'ESP32', led: 'LED' } };
+const bRat = Engine.rationale(buildRow);
+assert(bRat.cheapest === null, 'buildable rationale has no cheapest-missing (nothing missing)');
+assert(/Buildable now/.test(bRat.fit), 'buildable rationale fit text says buildable now');
+assert(bRat.uses.length === 2 && bRat.uses.includes('ESP32'), 'buildable rationale lists owned part names, deduped');
+assert(/optional upgrade/.test(bRat.whyNow), 'buildable rationale explains the optional upsides');
+
+const nearRow = { status: 'near', project: { id: 'y', difficulty: 'Intermediate', buildTime: '~2h' },
+  missing: ['relay'], gap: [{ cap: 'relay', part: 'Relay module', short: false }], optHave: [], usedParts: { mcu: 'ESP32' } };
+const nRat = Engine.rationale(nearRow);
+assert(nRat.cheapest && /Relay module/.test(nRat.cheapest.part), '1-gap near-miss names the single cheapest part to buy');
+assert(/Buy just the Relay module/.test(nRat.whyNow), '1-gap near rationale tells Toby the one buy that unlocks it');
+
+const near2 = { status: 'near', project: { id: 'z', difficulty: 'Advanced', buildTime: '~1d' },
+  missing: ['a', 'b'], gap: [{ cap: 'a', part: 'A' }, { cap: 'b', part: 'B' }], optHave: [], usedParts: {} };
+const n2Rat = Engine.rationale(near2);
+assert(n2Rat.cheapest === null, 'multi-gap near-miss has no single cheapest (points to shopping list)');
+
+// ---- Phase 5 Block 2: fuzzy/semantic search ----
+const srch1 = Engine.search('motion sensor');
+const srch1PartIds = srch1.parts.map(p => p.part.id);
+assert(srch1PartIds.indexOf('pir') !== -1, 'search "motion sensor" finds the PIR part via synonym');
+assert(srch1.projects.some(p => p.project.id === 'motion_light'), 'search "motion sensor" finds the Motion-Activated Light project');
+
+const srch2 = Engine.search('screen');
+assert(srch2.projects.some(p => p.project.id === 'tft_dashboard') || srch2.projects.some(p => p.project.id === 'oled_hello'),
+  'search "screen" finds screen-bearing projects (TFT/OLED)');
+
+// ranking: exact vocab token beats fuzzy — "temp" should hit temp projects first
+const srch3 = Engine.search('temp');
+assert(srch3.projects.length > 0 && /temp|weather/i.test(srch3.projects[0].project.title + srch3.projects[0].why),
+  'search "temp" returns temperature/weather projects ranked first');
+
+// fuzzy typo tolerance: "temprature" (typo) still resolves to temp synonyms
+const srch4 = Engine.search('temprature');
+assert(srch4.projects.length > 0, 'fuzzy typo "temprature" still returns matches');
+
+// empty query returns nothing
+const srch5 = Engine.search('   ');
+assert(srch5.parts.length === 0 && srch5.projects.length === 0, 'blank query returns nothing');
+
+// ---- Phase 5 Block 3: datasheet parse + part graph ----
+const ds = Engine.parseDatasheet('ESP32-S3 board with WiFi, Bluetooth LE, 1.28" TFT touch display, microSD slot, NeoPixel', 'My CYD-ish board');
+assert(ds.caps.indexOf('mcu-wifi') !== -1, 'parseDatasheet finds wifi -> mcu-wifi');
+assert(ds.caps.indexOf('display-spi-tft') !== -1, 'parseDatasheet finds TFT -> display-spi-tft');
+assert(ds.caps.indexOf('touch') !== -1, 'parseDatasheet finds touch');
+assert(ds.caps.indexOf('led-addressable') !== -1, 'parseDatasheet finds neopixel -> led-addressable');
+assert(ds.name === 'My CYD-ish board', 'parseDatasheet keeps the name');
+
+const dsBad = Engine.parseDatasheet('a plain wooden box', 'junk');
+assert(dsBad.caps.length === 0, 'parseDatasheet returns no caps for unrecognized text');
+
+const gr = Engine.partGraph('weather_station');
+const gCaps = gr.map(g => g.cap);
+assert(gCaps.indexOf('sensor-temp') !== -1, 'partGraph links weather_station via sensor-temp');
+const linkedTitles = gr.find(g => g.cap === 'sensor-temp').projects.map(p => p.title);
+assert(linkedTitles.length > 0, 'partGraph lists projects sharing sensor-temp');
+const grNone = Engine.partGraph('does_not_exist');
+assert(grNone.length === 0, 'partGraph returns [] for unknown project');
+
 console.log(process.exitCode ? '\nSOME ENGINE TESTS FAILED' : '\nALL ENGINE TESTS PASSED');

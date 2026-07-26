@@ -43,20 +43,72 @@
       return wrap;
     }
     const table = el('table', 'pin-table');
-    table.innerHTML =
-      '<thead><tr><th>Component</th><th>Signal</th><th>Pin</th><th>Note</th></tr></thead>';
+    const thead = el('thead');
+    const hr = el('tr');
+    ['Part', 'Signal', 'Pin', 'Note'].forEach(h => hr.appendChild(el('th', null, h)));
+    thead.appendChild(hr);
+    table.appendChild(thead);
     const tb = el('tbody');
     p.wiring.forEach(w => {
-      const tr = document.createElement('tr');
-      tr.innerHTML =
-        `<td>${escapeHtml(w.part)}</td><td>${escapeHtml(w.signal)}</td>` +
-        `<td class="pin">${escapeHtml(w.pin)}</td><td>${escapeHtml(w.note || '')}</td>`;
+      const tr = el('tr');
+      tr.appendChild(el('td', null, escapeHtml(w.part || '')));
+      tr.appendChild(el('td', null, escapeHtml(w.signal || '')));
+      tr.appendChild(el('td', null, escapeHtml(w.pin || '')));
+      tr.appendChild(el('td', null, escapeHtml(w.note || '')));
       tb.appendChild(tr);
     });
     table.appendChild(tb);
     wrap.appendChild(table);
-    wrap.appendChild(el('p', 'hint',
-      'Pin numbers are a starting point for an ESP32; adapt if your board differs.'));
+    return wrap;
+  }
+
+  // PHASE 5 BLOCK 4 — BOM / parts assist.
+  // Cross-checks the project's required/optional parts against the user's
+  // inventory and renders a ✅ have / ❌ need list + a copy-able shopping list.
+  function renderBom(p) {
+    const wrap = el('div', 'bom');
+    wrap.appendChild(el('h3', null, '🧰 Parts check (BOM)'));
+    try {
+      const inv = (root.Inventory && root.Inventory.load) ? root.Inventory.load() : { owned: {} };
+      const ownedIds = (root.Inventory && root.Inventory.ownedIds) ? root.Inventory.ownedIds(inv) : [];
+      E.setInventory(inv.owned || {});
+      const lines = E.bom(p.id, ownedIds);
+      if (!lines.length) {
+        wrap.appendChild(el('p', 'hint', 'No parts mapped for this project yet.'));
+        return wrap;
+      }
+      const list = el('ul', 'bom-list');
+      const need = [];
+      lines.forEach(L => {
+        const li = el('li', 'bom-item' + (L.have ? ' have' : ' need') + (L.optional ? ' optional' : ''));
+        const mark = L.have ? '✅' : '❌';
+        const qtyTxt = L.have && L.qty > 1 ? ' (×' + L.qty + ')' : '';
+        const optTxt = L.optional ? ' (optional)' : '';
+        li.appendChild(el('span', 'bom-mark', mark));
+        li.appendChild(el('span', 'bom-name', escapeHtml(L.partName) + optTxt + qtyTxt));
+        if (L.wiringNote) li.appendChild(el('span', 'bom-note', ' — ' + escapeHtml(L.wiringNote)));
+        list.appendChild(li);
+        if (!L.have && !L.optional) need.push(L.partName);
+      });
+      wrap.appendChild(list);
+      // shopping list (only the things you don't own)
+      const sl = el('div', 'shopping');
+      if (need.length) {
+        const txt = need.join('\n');
+        const copyBtn = el('button', 'btn ghost copy-btn', '📋 Copy shopping list');
+        copyBtn.addEventListener('click', () => {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).then(() => { copyBtn.textContent = '✓ Copied!'; setTimeout(() => copyBtn.textContent = '📋 Copy shopping list', 1500); }, () => {});
+          }
+        });
+        sl.appendChild(copyBtn);
+      } else {
+        sl.appendChild(el('p', 'hint', '🎉 You own everything this project needs — build it!'));
+      }
+      wrap.appendChild(sl);
+    } catch (e) {
+      wrap.appendChild(el('p', 'hint', 'Parts check unavailable.'));
+    }
     return wrap;
   }
 
@@ -116,6 +168,35 @@
     return wrap;
   }
 
+  // ---- Phase 5 Block 3: part -> project knowledge graph (offline lists) ----
+  // Renders Engine.partGraph(p): for each capability the project uses, the OTHER
+  // catalog projects that use it too. Plain lists — the useful adjacency without a
+  // force-directed layout lib.
+  function renderGraph(p) {
+    const wrap = el('div', 'graph');
+    wrap.appendChild(el('h3', null, '🕸️ What else uses these parts'));
+    const groups = E.partGraph(p.id);
+    if (!groups.length) {
+      wrap.appendChild(el('p', 'hint', 'No linked projects yet.'));
+      return wrap;
+    }
+    groups.forEach(g => {
+      const gw = el('div', 'graph-group');
+      gw.appendChild(el('h4', null, (T.CAPABILITY_CANONICAL[g.cap] || g.cap) + ':'));
+      const ul = el('ul', 'graph-list');
+      g.projects.forEach(pr => {
+        const li = document.createElement('li');
+        const a = el('a', 'graph-link', escapeHtml(pr.title));
+        a.href = '#/project/' + pr.id;
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      gw.appendChild(ul);
+      wrap.appendChild(gw);
+    });
+    return wrap;
+  }
+
   // Render a project into the detail panel and show it.
   function show(projectId) {
     const p = E.PROJECT_CATALOG.find(x => x.id === projectId);
@@ -155,6 +236,40 @@
       }
 
       panel.appendChild(renderWiring(p));
+      panel.appendChild(renderBom(p));
+
+      // ---- Phase 5 Block 1: rationale + teach-me in the detail view ----
+      // Pull the same analyze() row so the detail matches the card exactly.
+      const row = (root.__msmResult && root.__msmResult.buildable.concat(root.__msmResult.couldve))
+        .find(x => x.project.id === projectId);
+      if (row) {
+        const rat = E.rationale(row);
+        const ratBox = el('div', 'rationale');
+        ratBox.innerHTML = '<b>✅ Why it fits:</b> ' + escapeHtml(rat.fit) +
+          (rat.uses.length ? '' : '') ;  // uses chips added below
+        panel.appendChild(ratBox);
+        if (rat.uses.length) {
+          const chipWrap = el('div', 'chips');
+          rat.uses.forEach(u => chipWrap.appendChild(el('span', 'chip uses', escapeHtml(u))));
+          panel.appendChild(chipWrap);
+        }
+        const whyNow = el('div', 'why-now');
+        whyNow.innerHTML = escapeHtml(rat.whyNow);
+        panel.appendChild(whyNow);
+      }
+      if (p.teach && p.teach.length) {
+        const d = document.createElement('details');
+        d.className = 'teach';
+        const sum = document.createElement('summary');
+        sum.textContent = '🧠 Teach me (why each step)';
+        d.appendChild(sum);
+        const body = el('div', 'teach-body');
+        const ol = el('ol');
+        p.teach.forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+        body.appendChild(ol);
+        d.appendChild(body);
+        panel.appendChild(d);
+      }
 
       // ---- Phase 3A: verified Arduino sketch (copy-paste) ----
       panel.appendChild(renderCode(p));
@@ -175,6 +290,7 @@
       }
 
       panel.appendChild(renderMoreLike(p));
+      panel.appendChild(renderGraph(p));
     }
 
     // Switch to the detail panel. We toggle panels directly (no tab button for

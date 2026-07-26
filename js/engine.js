@@ -22,13 +22,13 @@
     // In Node we load the data files ourselves.
     const T = require('./taxonomy.js');
     const { PROJECT_CATALOG } = require('./catalog.js');
-    module.exports = factory(T.PARTS, T.CAPABILITY_CANONICAL, PROJECT_CATALOG, T.CYD_RELEVANT_CAPS, T.CYD_CAP_WEIGHT);
+    module.exports = factory(T.PARTS, T.CAPABILITY_CANONICAL, PROJECT_CATALOG, T.CYD_RELEVANT_CAPS, T.CYD_CAP_WEIGHT, T.SEARCH_SYNONYMS);
   } else {
     // In the browser the data globals already exist (loaded before this file).
     root.Engine = factory(root.TAXONOMY.PARTS, root.TAXONOMY.CAPABILITY_CANONICAL, root.CATALOG.PROJECT_CATALOG,
-                          root.TAXONOMY.CYD_RELEVANT_CAPS, root.TAXONOMY.CYD_CAP_WEIGHT);
+                          root.TAXONOMY.CYD_RELEVANT_CAPS, root.TAXONOMY.CYD_CAP_WEIGHT, root.TAXONOMY.SEARCH_SYNONYMS);
   }
-})(typeof self !== 'undefined' ? self : this, function (PARTS, CAPABILITY_CANONICAL, PROJECT_CATALOG, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT) {
+})(typeof self !== 'undefined' ? self : this, function (PARTS, CAPABILITY_CANONICAL, PROJECT_CATALOG, CYD_RELEVANT_CAPS, CYD_CAP_WEIGHT, SEARCH_SYNONYMS) {
 
   // ---------- small helpers ---------------------------------------------------
   const DIFF_PENALTY = { Beginner: 0, Intermediate: 1, Advanced: 2 };
@@ -333,8 +333,252 @@
       (DIFF_PENALTY[a.project.difficulty] - DIFF_PENALTY[b.project.difficulty]));
   }
 
+  /**
+   * PHASE 5 BLOCK 1 — "Why it fits" rationale (ponytail principle).
+   * Pure, DOM-free, Node-testable. Turns an analyze() row into a structured
+   * explanation the UI renders, so every recommendation justifies ITSELF.
+   * @param {object} r  a row from analyze().buildable / analyze().couldve
+   * @returns {{fit:string, uses:string[], skills:{level:string,time:string},
+   *            missing:string[], cheapest:{cap:string,part:string}|null,
+   *            whyNow:string}}
+   */
+  function rationale(r) {
+    const p = r.project || {};
+    const seen = new Set();
+    const uses = [];
+    Object.keys(r.usedParts || {}).forEach(cap => {
+      const n = r.usedParts[cap];
+      if (!seen.has(n)) { seen.add(n); uses.push(n); }
+    });
+    const missing = (r.gap || []).map(g => g.part);
+    // A 1-gap near-miss has exactly one blocker -> name the single thing to buy.
+    const cheapest = (r.missing && r.missing.length === 1)
+      ? { cap: r.missing[0], part: CAPABILITY_CANONICAL[r.missing[0]] || r.missing[0] }
+      : null;
+    let fit, whyNow;
+    if (r.status === 'buildable') {
+      const extra = (r.optHave || []).length;
+      fit = 'Buildable now — every required capability is already in your inventory.';
+      whyNow = extra
+        ? `Uses ${uses.length} part${uses.length === 1 ? '' : 's'} you own, plus ${extra} optional upgrade${extra === 1 ? '' : 's'} you can switch on anytime.`
+        : 'Everything it needs is on your bench — no waiting, no new purchases.';
+    } else {
+      fit = `Almost there — ${r.missing.length} part${r.missing.length === 1 ? '' : 's'} short.`;
+      whyNow = cheapest
+        ? `Buy just the ${cheapest.part} and this jumps from "could've been" to buildable now.`
+        : `Close ${r.missing.length} gaps (see the shopping list) and it's buildable.`;
+    }
+    return { fit, uses, skills: { level: p.difficulty, time: p.buildTime }, missing, cheapest, whyNow };
+  }
+
+  /**
+   * PHASE 5 BLOCK 2 — Semantic & fuzzy search (offline, no key, no network).
+   * Pure + Node-testable. Expands the user's words through SEARCH_SYNONYMS, then
+   * scores PARTS and PROJECTS by token overlap. Exact vocabulary hits rank first;
+   * synonym + fuzzy (Levenshtein <= 2) hits follow. Deterministic matching stays
+   * the source of truth — this is an *augmentation* to help you FIND a part or
+   * project when you don't know its exact taxonomy name.
+   * @param {string} query  free text, e.g. "motion sensor", "screen", "temprature"
+   * @returns {{parts:Array<{part,score,why}>, projects:Array<{project,score,why}>}}
+   */
+  function normalize(s) { return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n; if (!n) return m;
+    const d = Array.from({ length: m + 1 }, (_, i) => [i].concat(new Array(n).fill(0)));
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        d[i][j] = Math.min(
+          d[i - 1][j] + 1,
+          d[i][j - 1] + 1,
+          d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[m][n];
+  }
+
+  function search(query) {
+    const q = normalize(query);
+    if (!q) return { parts: [], projects: [] };
+    const qTokens = q.split(' ');
+
+    // Expand the query into (token -> weight) where 3 = exact vocab, 2 = synonym,
+    // 1 = fuzzy. Synonyms pull in the taxonomy's own tokens; fuzzy catches typos.
+    const terms = {}; // token -> best weight seen
+    function add(tok, w) { terms[tok] = Math.max(terms[tok] || 0, w); }
+    qTokens.forEach(tok => {
+      add(tok, 3);
+      if (SEARCH_SYNONYMS[tok]) SEARCH_SYNONYMS[tok].forEach(s => add(s, 2));
+      // also try the synonym map in reverse (so "pir" expands to "motion sensor")
+      // and fuzzy-match every known vocabulary token for this query token.
+      Object.keys(SEARCH_SYNONYMS).forEach(key => {
+        if (SEARCH_SYNONYMS[key].indexOf(tok) !== -1) add(key, 2);
+        // fuzzy-match the synonym KEYS too (e.g. "temprature" -> "temperature")
+        if (levenshtein(tok, key) <= 2 && tok.length >= 3) add(key, 2);
+      });
+      Object.keys(CAPABILITY_CANONICAL).concat(PARTS.map(p => p.id)).forEach(vocab => {
+        if (levenshtein(tok, vocab) <= 2 && tok.length >= 3) add(vocab, 1);
+      });
+    });
+
+    // ---- score PARTS ----
+    // A part matches if any of its searchable text (id, name, caps) shares a term.
+    const partHits = [];
+    PARTS.forEach(part => {
+      const hay = normalize([part.id, part.name, (part.caps || []).join(' '), (part.cat || '')].join(' '));
+      let score = 0; const matched = [];
+      Object.keys(terms).forEach(tok => {
+        if (hay.indexOf(' ' + tok + ' ') !== -1 || hay === tok || hay.startsWith(tok + ' ') || hay.endsWith(' ' + tok)) {
+          score += terms[tok]; matched.push(tok);
+        }
+      });
+      if (score > 0) partHits.push({ part, score, why: matched.slice(0, 3).join(', ') });
+    });
+    partHits.sort((a, b) => b.score - a.score || a.part.name.localeCompare(b.part.name));
+
+    // ---- score PROJECTS ----
+    const projHits = [];
+    PROJECT_CATALOG.forEach(p => {
+      const hay = normalize([p.title, p.blurb, (p.tags || []).join(' '), (p.requiredCaps || []).join(' '),
+        (p.optionalCaps || []).join(' '), (p.concepts || []).join(' ')].join(' '));
+      let score = 0; const matched = [];
+      Object.keys(terms).forEach(tok => {
+        if (hay.indexOf(' ' + tok + ' ') !== -1 || hay === tok || hay.startsWith(tok + ' ') || hay.endsWith(' ' + tok)) {
+          score += terms[tok]; matched.push(tok);
+        }
+      });
+      if (score > 0) projHits.push({ project: p, score, why: matched.slice(0, 3).join(', ') });
+    });
+    projHits.sort((a, b) => b.score - a.score || (b.project.coolness || 0) - (a.project.coolness || 0));
+
+    return { parts: partHits, projects: projHits };
+  }
+
+  /**
+   * PHASE 5 BLOCK 3 — Datasheet / text -> capability import (offline).
+   * Pure + Node-testable. Scans free text for component keywords and maps them to
+   * the SAME capability tokens the engine matches on, so an imported part slots
+   * straight into matching. No PDF parsing, no ML — a keyword->cap table covers
+   * the "what does this board give me?" case for the parts makers actually own.
+   * ponytail: keyword table only, no OCR/PDF; add pdf.js text-extraction if you
+   * must import scanned datasheets.
+   */
+  // Keyword (lowercased substring) -> capability token(s). Kept small + explicit.
+  const KEYWORD_CAPS = {
+    wifi: ['mcu-wifi'], wireless: ['mcu-wifi'], 'wi-fi': ['mcu-wifi'],
+    bluetooth: ['ble'], ble: ['ble'], 'low energy': ['ble'],
+    buzzer: ['buzzer'], piezo: ['buzzer'], speaker: ['speaker'],
+    led: ['led'], neopixel: ['led-addressable'], 'rgb led': ['led-addressable'], ws2812: ['led-addressable'],
+    motor: ['dc-motor'], 'dc motor': ['dc-motor'],
+    servo: ['servo'], stepper: ['stepper'],
+    relay: ['relay'],
+    screen: ['display-spi-tft', 'display-eink', 'display-i2c-oled', 'touch'],
+    display: ['display-spi-tft', 'display-eink', 'display-i2c-oled'],
+    oled: ['display-i2c-oled'], ssd1306: ['display-i2c-oled'],
+    tft: ['display-spi-tft'], lcd: ['display-spi-tft'],
+    eink: ['display-eink'], 'e-ink': ['display-eink'], epaper: ['display-eink'],
+    touch: ['touch'],
+    temperature: ['sensor-temp'], temp: ['sensor-temp'], dht: ['sensor-temp', 'sensor-humidity'],
+    humidity: ['sensor-humidity'],
+    motion: ['pir'], pir: ['pir'],
+    distance: ['sensor-distance'], ultrasonic: ['sensor-distance'], 'hc-sr04': ['sensor-distance'],
+    gas: ['sensor-gas'], smoke: ['sensor-gas'], mq: ['sensor-gas'],
+    moisture: ['sensor-moisture'], soil: ['sensor-moisture'],
+    rtc: ['rtc'], 'real-time': ['rtc'], clock: ['rtc'], ds3231: ['rtc'],
+    sd: ['storage-sd'], 'sd card': ['storage-sd'], microsd: ['storage-sd'],
+    camera: ['camera'], ov2640: ['camera'],
+    imu: ['sensor-imu'], accelerometer: ['sensor-imu'], gyro: ['sensor-imu'], 'mpu': ['sensor-imu'],
+    gy: ['sensor-imu'], '6-axis': ['sensor-imu'],
+    analog: ['adc'], adc: ['adc'],
+    i2c: ['i2c'], spi: ['spi'], pwm: ['pwm'],
+  };
+
+  function parseDatasheet(text, name) {
+    const hay = normalize(text || '');
+    const caps = [];
+    Object.keys(KEYWORD_CAPS).forEach(kw => {
+      if (hay.indexOf(kw) !== -1) KEYWORD_CAPS[kw].forEach(c => { if (caps.indexOf(c) === -1) caps.push(c); });
+    });
+    // only keep caps the engine actually knows (defensive against stale keywords)
+    const valid = caps.filter(c => CAPABILITY_CANONICAL[c]);
+    return { name: (name || '').trim(), caps: valid };
+  }
+
+  /**
+   * PHASE 5 BLOCK 3 — part -> project knowledge graph (offline, no layout lib).
+   * For a project, group the OTHER catalog projects by the capability they share
+   * with it. This is the "what-else uses what I just learned?" adjacency list —
+   * the useful 10% of a force-directed graph, rendered as plain lists.
+   * @returns {Array<{cap, label, projects:Array<{id,title}>}>}
+   */
+  function partGraph(projectId) {
+    const p = PROJECT_CATALOG.find(x => x.id === projectId);
+    if (!p) return [];
+    const caps = (p.requiredCaps || []).concat(p.optionalCaps || []);
+    const out = [];
+    caps.forEach(cap => {
+      const shared = PROJECT_CATALOG.filter(x => x.id !== projectId &&
+        ((x.requiredCaps || []).concat(x.optionalCaps || [])).indexOf(cap) !== -1);
+      if (shared.length) out.push({ cap, label: CAPABILITY_CANONICAL[cap] || cap, projects: shared.map(x => ({ id: x.id, title: x.title })) });
+    });
+    return out;
+  }
+
+  /**
+   * PHASE 5 BLOCK 4 — BOM / parts assist (offline, no PCB toolchain).
+   * Turns a project's required+optional capability tokens into a concrete parts
+   * list, deduplicated, with the user's inventory (Phase 3B) cross-checked so
+   * each line shows have/need and how many they own. A wiring note is pulled
+   * from the project's own pin map when present. This is the "what do I grab
+   * from the bin?" 10% of a full PCB/BOM flow — no KiCad, no netlist.
+   * @param {string} projectId
+   * @param {string[]} [ownedIds] part ids the user owns (Inventory.ownedIds)
+   * @returns {Array<{cap,partId,partName,optional,have,qty,wiringNote}>}
+   */
+  function bom(projectId, ownedIds) {
+    const p = PROJECT_CATALOG.find(x => x.id === projectId);
+    if (!p) return [];
+    const owned = new Set(ownedIds || []);
+    const caps = (p.requiredCaps || []).concat(p.optionalCaps || []);
+    // map each capability to ONE representative part (first part that provides it)
+    const seen = {};
+    const lines = [];
+    caps.forEach(cap => {
+      if (seen[cap]) return;            // don't list the same cap twice
+      seen[cap] = true;
+      const part = PARTS.find(pt => (pt.caps || []).indexOf(cap) !== -1);
+      if (!part) {                      // capability with no catalog part (e.g. 'mcu')
+        const label = CAPABILITY_CANONICAL[cap] || cap;
+        const isOpt = (p.optionalCaps || []).indexOf(cap) !== -1;
+        lines.push({ cap, partId: null, partName: label, optional: isOpt, have: false, qty: 0, wiringNote: '' });
+        return;
+      }
+      const isOpt = (p.optionalCaps || []).indexOf(cap) !== -1;
+      const have = owned.has(part.id);
+      const qty = have ? (InventoryQty[part.id] || 1) : 0;
+      // wiring note: first pin-map row whose part matches this part's name
+      const wn = (p.wiring || []).find(w => w.part && part.name && w.part.toLowerCase().indexOf(part.name.split(' ')[0].toLowerCase()) !== -1);
+      lines.push({
+        cap, partId: part.id, partName: part.name, optional: isOpt,
+        have, qty, wiringNote: wn ? (wn.pin + (wn.note ? ' — ' + wn.note : '')) : ''
+      });
+    });
+    return lines;
+  }
+
+  // Filled at runtime by Detail via Engine.setInventory(qtyMap) so bom() can read qty.
+  let InventoryQty = {};
+
+  function setInventory(qtyMap) { InventoryQty = qtyMap || {}; }
+
   return {
     analyze,
+    rationale,
+    search,
+    parseDatasheet,
+    partGraph,
+    bom,
+    setInventory,
     matchProject,
     computeInventoryCaps,
     computeCapQty,

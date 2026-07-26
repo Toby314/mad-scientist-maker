@@ -36,8 +36,16 @@ The single highest-value block. Every recommendation must *explain itself*.
 - Optional: lightweight local vector index (tiny Ollama embeddings) for
   "projects like this one" — behind a flag, off by default, no cloud.
 - Tests: fuzzy query returns synonym parts; ranking puts exact matches first.
+- **✅ DONE.** Offline `Engine.parseDatasheet(text)` keyword-scans pasted
+  datasheet/part text and ticks the matching capability checkboxes (reuses the
+  Phase 3B custom-part checklist — no new UI control). `Engine.partGraph(id)`
+  renders, on each project's detail page, the OTHER catalog projects that share
+  each capability ("What else uses these parts"). Plain lists, no D3/vis-network.
+  *Why lazy:* the adjacency list is the 10% of a force-directed graph a maker
+  actually uses ("what can I build with what I just learned?"). Scanned-keyword
+  import covers real owned boards without a PDF/OCR pipeline.
 
-## Block 3 — Datasheet / PDF import + knowledge graph  *(labs/graphify + kicad-happy)*
+## Block 4 — PCB / BOM assist  *(await)*
 - **Import**: paste a part number or drop a datasheet PDF → extract pins /
   capabilities / typical circuits → create a custom catalog part automatically.
 - **Graph view**: local, no-cloud visualization of parts ↔ projects ↔ sketches

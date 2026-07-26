@@ -45,6 +45,7 @@
   function recompute() {
     // v2: analyze() takes the owned qty map directly.
     lastResult = E.analyze(state.owned, state.custom);
+    root.__msmResult = lastResult; // Phase 5 Block 1: detail view reads the row for its rationale
     filter = currentFilter();
     // Phase 3D: when "Optimize for CYD" is on, re-rank the BUILDABLE list by
     // CYD relevance (screen-builds first) before handing it to the renderer.
@@ -181,6 +182,22 @@
   }
   document.getElementById('btn-custom-add').addEventListener('click', addCustomPart);
 
+  // ---- Phase 5 Block 3: datasheet text -> tick capabilities ----
+  // Reuses the SAME caps checklist already built above; we just tick the boxes
+  // that Engine.parseDatasheet() finds in the pasted text. No new UI control.
+  document.getElementById('btn-sheet-scan').addEventListener('click', () => {
+    const text = document.getElementById('sheet-text').value;
+    if (!text.trim()) { toast('Paste some datasheet text first'); return; }
+    const { caps } = E.parseDatasheet(text);
+    if (!caps.length) { toast('No recognizable components found'); return; }
+    caps.forEach(cap => {
+      const cb = capsGrid.querySelector('.cap-check[value="' + cap + '"]');
+      if (cb) cb.checked = true;
+    });
+    syncCapsPreview();
+    toast('Ticked ' + caps.length + ' capability' + (caps.length === 1 ? '' : 'ies') + ' — review then Add part');
+  });
+
   // ---- TAB switching ----
   function showTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
@@ -189,6 +206,30 @@
   }
   document.querySelectorAll('.tab').forEach(t =>
     t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+  // ---- Phase 5 Block 2: fuzzy/semantic search ----
+  // Pure augmentation on top of the deterministic engine: type any word, get
+  // matching PARTS (click to tick them in inventory) + matching PROJECTS (jump).
+  const searchEl = document.getElementById('project-search');
+  const searchResultsEl = document.getElementById('search-results');
+  if (searchEl) {
+    const runSearch = () => {
+      const q = searchEl.value.trim();
+      if (!q) { searchResultsEl.hidden = true; searchResultsEl.innerHTML = ''; return; }
+      const res = E.search(q);
+      UI.renderSearchResults(searchResultsEl, res, (partId) => {
+        // Ticking a part from search: add 1 to owned, re-render, and clear search
+        // focus so the projects list (now updated) is what the maker sees.
+        Inv.setQty(state, partId, (state.owned[partId] || 0) + 1);
+        persist(); renderInventoryNow(); recompute();
+        searchEl.value = ''; searchResultsEl.hidden = true; searchResultsEl.innerHTML = '';
+        toast('Added ' + ((T.PARTS.find(p => p.id === partId) || {}).name || partId) + ' — see updated matches');
+      });
+      searchResultsEl.hidden = false;
+    };
+    searchEl.addEventListener('input', runSearch);
+    searchEl.addEventListener('search', runSearch); // clear (x) button in some browsers
+  }
 
   // ---- Phase 2A: filters re-render project lists live (engine untouched) ----
   document.querySelectorAll('.f-diff').forEach(c =>
